@@ -107,7 +107,7 @@ export default function App() {
         <div className="header-inner">
           <div>
             <h1 className="logo">Battle Dome</h1>
-            <p className="tagline">Data-driven Opponent Matchup Evaluation</p>
+            <p className="tagline">Data-driven OU Matchup Evaluation</p>
           </div>
           <span className="badge format">{FORMAT_LABEL}</span>
         </div>

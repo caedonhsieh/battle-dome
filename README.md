@@ -1,6 +1,6 @@
 # Battle Dome
 
-**DOME = Data-driven Opponent Matchup Evaluation**
+**DOME = Data-driven OU Matchup Evaluation**
 
 Benchmark your Pokémon team against reference teams — every battle genuinely simulated
 in your browser with [@pkmn/sim](https://github.com/smogon/pokemon-showdown). No server,
