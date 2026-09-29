@@ -1,0 +1,60 @@
+import type {MatchupResult} from '../sim/worker';
+
+export interface SavedTeam {
+  id: string;
+  name: string;
+  paste: string;
+  createdAt: number;
+}
+
+export interface CustomRef {
+  id: string;
+  name: string;
+  archetype: string;
+  paste: string;
+  createdAt: number;
+}
+
+export interface BundledRef {
+  id: string;
+  name: string;
+  archetype: string;
+  author: string;
+  url: string;
+  paste: string;
+}
+
+export interface RunConfig {
+  battlesPerMatchup: number;
+  seed: string;
+}
+
+export interface RunMeta {
+  teamName: string;
+  battlesPerMatchup: number;
+  seed: string;
+  refCount: number;
+  date: number;
+}
+
+export interface RunRecord {
+  id: string;
+  name: string;
+  date: number;
+  meta: RunMeta;
+  refs: {id: string; name: string; archetype: string}[];
+  results: MatchupResult[];
+}
+
+export const SMOGON_THREAD_URL =
+  'https://www.smogon.com/forums/threads/sv-ou-sample-teams-new-samples-added-post-spl-and-tera-blast-ban.3712513/';
+export const FORMAT_LABEL = 'gen9 OU';
+export const REFERENCE_SET_LABEL = 'Smogon SV OU Sample Teams';
+
+export function uid(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+export function randomSeed(): string {
+  return Math.random().toString(36).slice(2, 10);
+}
