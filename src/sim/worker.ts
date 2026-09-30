@@ -28,6 +28,8 @@ export interface BattleScore {
   turns: number;
   p1Left: number;
   p2Left: number;
+  /** Model actions that failed to map to a Showdown choice (should stay ~0). */
+  unmappable?: number;
 }
 
 export interface MatchupResult {
@@ -157,7 +159,7 @@ w.onmessage = (e: MessageEvent) => {
           if (r.winner === 'p1') wins++;
           else if (r.winner === 'p2') losses++;
           else draws++;
-          battles.push({winner: r.winner, turns: r.turns, p1Left: r.p1Left ?? 0, p2Left: r.p2Left ?? 0});
+          battles.push({winner: r.winner, turns: r.turns, p1Left: r.p1Left ?? 0, p2Left: r.p2Left ?? 0, unmappable: r.unmappable ?? 0});
           post({
             type: 'progress',
             matchupIndex: mi,

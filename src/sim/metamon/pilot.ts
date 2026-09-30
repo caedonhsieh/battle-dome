@@ -58,7 +58,7 @@ export class MetamonBattle {
   private lastStates: Record<Side, UniversalState | null> = {p1: null, p2: null};
   private prevActions: Record<Side, number | null> = {p1: null, p2: null};
   private t: Record<Side, number> = {p1: 0, p2: 0};
-  /** Decisions that produced no mappable choice (should stay ~0). */
+  /** Legal-by-tracker actions that failed to map to a Showdown choice (should stay ~0). */
   unmappable = 0;
 
   constructor(
@@ -105,30 +105,28 @@ export class MetamonBattle {
     const history = [...this.histories[side], step];
     const logits = await this.infer(history);
 
-    let best = -1;
-    let bestVal = -Infinity;
-    for (let i = 0; i < 13; i++) {
-      if (illegal[i]) continue;
-      const v = logits[i];
-      if (v > bestVal) {
-        bestVal = v;
-        best = i;
+    // Try legal actions in descending logit order and take the first one that
+    // maps to a real Showdown choice. A single unmappable action (e.g. a
+    // stale tracker view) must not nuke the whole decision into a silent
+    // move-slot-1 autoChoose.
+    const ranked: number[] = [];
+    for (let i = 0; i < 13; i++) if (!illegal[i]) ranked.push(i);
+    ranked.sort((a, b) => logits[b] - logits[a]);
+    if (ranked.length === 0) return null;
+
+    for (const a of ranked) {
+      const order = actionIdxToOrder(tr, a);
+      const choice = order ? orderToChoice(tr, order) : null;
+      if (choice) {
+        this.histories[side] = history;
+        this.lastStates[side] = state;
+        this.prevActions[side] = a;
+        this.t[side]++;
+        return choice;
       }
-    }
-    if (best < 0) return null;
-
-    const order = actionIdxToOrder(tr, best);
-    const choice = order ? orderToChoice(tr, order) : null;
-    if (!choice) {
       this.unmappable++;
-      return null;
     }
-
-    this.histories[side] = history;
-    this.lastStates[side] = state;
-    this.prevActions[side] = best;
-    this.t[side]++;
-    return choice;
+    return null;
   }
 
   private async infer(history: Step[]): Promise<number[]> {

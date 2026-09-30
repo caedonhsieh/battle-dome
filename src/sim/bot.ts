@@ -19,6 +19,8 @@ export interface BattleResult {
   /** Pokémon still standing per side at battle end (useful per-game detail). */
   p1Left?: number;
   p2Left?: number;
+  /** Model actions that failed to map to a Showdown choice (should stay ~0). */
+  unmappable?: number;
 }
 
 export interface RunBattleOpts {

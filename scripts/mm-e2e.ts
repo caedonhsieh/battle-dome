@@ -9,7 +9,7 @@
 import {runBattleMetamon} from '../src/sim/metamon/runner.js';
 import teamsData from '../src/data/reference-teams.json';
 
-const ORT_PATH = '/home/hatch/workspace/spikes/metamon-ts/node_modules/onnxruntime-node';
+const ORT_PATH = '/home/hatch/workspace/spikes/metamon-ts/node_modules/onnxruntime-node/dist/index.js';
 const MODEL = '/home/hatch/workspace/spikes/metamon/kadabra3_fp16_ort_single.onnx';
 const teams: Array<{name: string; paste: string}> = (teamsData as any).teams;
 
@@ -34,8 +34,9 @@ async function main() {
       battleIndex: 0,
     }, () => false);
     console.log(
-      `[mm-e2e] ${teams[a].name} vs ${teams[b].name}: winner=${r.winner} turns=${r.turns} (${((Date.now() - t1) / 1000).toFixed(1)}s)`,
+      `[mm-e2e] ${teams[a].name} vs ${teams[b].name}: winner=${r.winner} turns=${r.turns} unmappable=${r.unmappable ?? 0} (${((Date.now() - t1) / 1000).toFixed(1)}s`,
     );
+    unmappableTotal += r.unmappable ?? 0;
     if (r.turns >= 200) console.log('[mm-e2e] WARNING: hit turn cap');
   }
   // Determinism: same matchup + same seed must give identical results.
@@ -47,6 +48,7 @@ async function main() {
       battleIndex: 0,
     }, () => false);
     det.push(`${r.winner}/${r.turns}`);
+    unmappableTotal += r.unmappable ?? 0;
   }
   console.log(`[mm-e2e] determinism check: ${det.join(' vs ')} ${det[0] === det[1] ? 'IDENTICAL' : 'MISMATCH!'}`);
 
@@ -56,7 +58,8 @@ async function main() {
     matchupIndex: 32,
     battleIndex: 0,
   }, () => false);
-  console.log(`[mm-e2e] nicknamed matchup: winner=${r4.winner} turns=${r4.turns}`);
+  console.log(`[mm-e2e] nicknamed matchup: winner=${r4.winner} turns=${r4.turns} unmappable=${r4.unmappable ?? 0}`);
+  unmappableTotal += r4.unmappable ?? 0;
   console.log(`[mm-e2e] done in ${((Date.now() - t0) / 1000).toFixed(1)}s, unmappable=${unmappableTotal}`);
 }
 

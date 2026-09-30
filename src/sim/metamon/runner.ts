@@ -169,7 +169,13 @@ export async function runBattleMetamon(
       }
       let ok = false;
       if (choice) ok = s.choose(choice);
-      if (!ok) s.autoChoose();
+      if (!ok) {
+        // Last resort only: decide() already falls back through the model's
+        // ranked legal actions, so reaching here means nothing mapped.
+        // Never silent — a firing fallback is a bug, not a strategy.
+        console.warn(`[metamon] autoChoose last-resort fallback for ${side} (choice was ${choice})`);
+        s.autoChoose();
+      }
     }
     battle.commitChoices();
     battle.sendUpdates();
@@ -197,6 +203,7 @@ export async function runBattleMetamon(
     turns: battle.turn,
     p1Left,
     p2Left,
+    unmappable: mb.unmappable,
     log: opts.captureLog ? header.concat(state.broadcast) : undefined,
   };
 }

@@ -182,6 +182,16 @@ export class BattleTracker {
           poke.details,
           turn.getPokemon(p1)
         );
+        // Link the request-slot identity (custom nickname, or the species
+        // display name when unnicknamed) onto the tracked pokemon. Benched
+        // mons never appear in |switch| protocol lines, so without this their
+        // nickname stays null and every model switch order silently fails to
+        // map back to a request slot in orderToChoice (degrading to a
+        // move-slot-1 autoChoose).
+        if (poke.ident) {
+          const ci = poke.ident.indexOf(':');
+          metamonP.nickname = ci >= 0 ? poke.ident.slice(ci + 1).trim() : poke.ident.trim();
+        }
         this.updatePokemonFromSideRequest(poke, metamonP);
         if (poke.active) {
           activePokemon = metamonP;
