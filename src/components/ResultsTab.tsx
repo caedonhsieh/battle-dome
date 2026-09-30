@@ -41,7 +41,6 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
   const [renameValue, setRenameValue] = useState('');
   const [replayTitle, setReplayTitle] = useState<string | null>(null);
   const [replayMatchup, setReplayMatchup] = useState<MatchupResult | null>(null);
-  const [replayBattle, setReplayBattle] = useState(0);
   const [replayLines, setReplayLines] = useState<ReplayLine[] | null>(null);
   const [replayRawLog, setReplayRawLog] = useState<string[] | null>(null);
   const [replayLoading, setReplayLoading] = useState(false);
@@ -68,7 +67,6 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
     const refPaste = getRefPaste(r.refId);
     if (!userPaste || !refPaste || matchupIndex < 0) return;
     setReplayMatchup(r);
-    setReplayBattle(battleIndex);
     setReplayTitle(`${current.meta.teamName} vs ${r.name} — battle ${battleIndex + 1} replay`);
     setReplayLines(null);
     setReplayRawLog(null);
@@ -138,10 +136,6 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
     a.remove();
     URL.revokeObjectURL(url);
   };
-
-  const replayTotalBattles = replayMatchup
-    ? replayMatchup.wins + replayMatchup.losses + replayMatchup.draws
-    : 0;
 
   const canReplay = (r: MatchupResult) =>
     !runActive &&
@@ -410,19 +404,6 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
             <div className="modal-head">
               <h3>{replayTitle}</h3>
               <div className="modal-head-actions">
-                {replayMatchup && replayTotalBattles > 1 && (
-                  <label className="muted tiny">Battle:{' '}
-                    <select
-                      value={replayBattle}
-                      disabled={replayLoading}
-                      onChange={(e) => void runReplay(replayMatchup, Number(e.target.value))}
-                    >
-                      {Array.from({length: replayTotalBattles}, (_, i) => (
-                        <option key={i} value={i}>#{i + 1}</option>
-                      ))}
-                    </select>
-                  </label>
-                )}
                 {replayRawLog && !replayLoading && (
                   <>
                     <button className="btn small ghost" onClick={() => void copyReplayLog()}>
