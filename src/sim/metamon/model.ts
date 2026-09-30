@@ -1,8 +1,8 @@
 /**
  * Metamon Kadabra3 model loading for the browser.
  *
- * The 94.8MB fp16 ONNX model is fetched once from the public GitHub release,
- * cached in IndexedDB, then loaded into onnxruntime-web. WebGPU is tried first
+ * The 94.8MB fp16 ONNX model is fetched once from the same-origin models/
+ * directory, cached in IndexedDB, then loaded into onnxruntime-web. WebGPU is tried first
  * with a warmup probe; any failure falls back to WASM.
  *
  * This module is web-only (imports onnxruntime-web). The pilot in pilot.ts
@@ -19,8 +19,8 @@ import * as ort from 'onnxruntime-web';
  * The file lives at models/ on the gh-pages branch only (kept out of the
  * main repo so clones stay small); the release remains the source of truth.
  */
-export const MODEL_URL = `${import.meta.env.BASE_URL}models/kadabra3_fp16_ort_single.onnx`;
-export const MODEL_VERSION = 'kadabra3-fp16-v1';
+export const MODEL_URL = `${import.meta.env.BASE_URL}models/kadabra3_fp16_ort_single_noeinsum.onnx`;
+export const MODEL_VERSION = 'kadabra3-fp16-v2';
 /** onnxruntime-web release matching the installed npm version (for wasm binaries). */
 const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/';
 
