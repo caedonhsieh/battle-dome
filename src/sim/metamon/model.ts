@@ -111,7 +111,7 @@ function configureOrt(): void {
   // Leave numThreads at default (hardwareConcurrency-based).
 }
 
-/** Tiny warmup probe: 1 timestep of zeros, just to prove the EP works end-to-end. */
+/** Tiny warmup probe: 1 timestep of zeros (batch=1 KV), just to prove the EP works end-to-end. */
 async function warmup(session: ort.InferenceSession): Promise<void> {
   const feeds: Record<string, ort.Tensor> = {
     numbers: new ort.Tensor('float32', new Float32Array(55), [1, 1, 55]),
@@ -119,6 +119,9 @@ async function warmup(session: ort.InferenceSession): Promise<void> {
     illegal_actions: new ort.Tensor('bool', new Uint8Array(13), [1, 1, 13]),
     rl2s: new ort.Tensor('float32', new Float32Array(14), [1, 1, 14]),
     time_idxs: new ort.Tensor('int64', new BigInt64Array(1), [1, 1, 1]),
+    key_cache: new ort.Tensor('float32', new Float32Array(6 * 1 * 200 * 12 * 64), [6, 1, 200, 12, 64]),
+    val_cache: new ort.Tensor('float32', new Float32Array(6 * 1 * 200 * 12 * 64), [6, 1, 200, 12, 64]),
+    seq_lens: new ort.Tensor('int32', new Int32Array(1), [1]),
   };
   const out = await session.run(feeds);
   const logits = out['logits'];
