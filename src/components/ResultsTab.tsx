@@ -39,25 +39,33 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [replayTitle, setReplayTitle] = useState<string | null>(null);
+  const [replayMatchup, setReplayMatchup] = useState<MatchupResult | null>(null);
+  const [replayBattle, setReplayBattle] = useState(0);
   const [replayLines, setReplayLines] = useState<ReplayLine[] | null>(null);
   const [replayLoading, setReplayLoading] = useState(false);
   const [replayError, setReplayError] = useState<string | null>(null);
 
   const closeReplay = () => {
     setReplayTitle(null);
+    setReplayMatchup(null);
     setReplayLines(null);
     setReplayError(null);
     setReplayLoading(false);
   };
 
-  /** Re-simulate battle 0 of a matchup (deterministic: identical to the run's first battle). */
-  const openReplay = async (r: MatchupResult) => {
+  /**
+   * Re-simulate one battle of a matchup (deterministic: identical to the
+   * run's battle at that index, since the seed mixes in the battle index).
+   */
+  const runReplay = async (r: MatchupResult, battleIndex: number) => {
     if (!current || runActive || replayLoading) return;
     const matchupIndex = current.results.indexOf(r);
     const userPaste = current.meta.userPaste ?? getUserPaste(current.meta.teamName);
     const refPaste = getRefPaste(r.refId);
     if (!userPaste || !refPaste || matchupIndex < 0) return;
-    setReplayTitle(`${current.meta.teamName} vs ${r.name} — battle 1 replay`);
+    setReplayMatchup(r);
+    setReplayBattle(battleIndex);
+    setReplayTitle(`${current.meta.teamName} vs ${r.name} — battle ${battleIndex + 1} replay`);
     setReplayLines(null);
     setReplayError(null);
     setReplayLoading(true);
@@ -67,6 +75,7 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
         refPaste,
         seed: current.meta.seed,
         matchupIndex,
+        battleIndex,
       });
       setReplayLines(formatReplayLog(res.log, current.meta.teamName, r.name));
     } catch (err: any) {
@@ -75,6 +84,14 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
       setReplayLoading(false);
     }
   };
+
+  const openReplay = (r: MatchupResult) => {
+    void runReplay(r, 0);
+  };
+
+  const replayTotalBattles = replayMatchup
+    ? replayMatchup.wins + replayMatchup.losses + replayMatchup.draws
+    : 0;
 
   const canReplay = (r: MatchupResult) =>
     !runActive &&
@@ -216,7 +233,7 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                                 <button
                                   className="btn small ghost"
                                   onClick={() => void openReplay(r)}
-                                  title="Re-simulate this matchup's first battle and show the log"
+                                  title="Re-simulate one battle of this matchup and show the log"
                                 >
                                   ▶ Replay
                                 </button>
@@ -297,7 +314,22 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <h3>{replayTitle}</h3>
-              <button className="btn small ghost" onClick={closeReplay}>✕ Close</button>
+              <div className="modal-head-actions">
+                {replayMatchup && replayTotalBattles > 1 && (
+                  <label className="muted tiny">Battle:{' '}
+                    <select
+                      value={replayBattle}
+                      disabled={replayLoading}
+                      onChange={(e) => void runReplay(replayMatchup, Number(e.target.value))}
+                    >
+                      {Array.from({length: replayTotalBattles}, (_, i) => (
+                        <option key={i} value={i}>#{i + 1}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <button className="btn small ghost" onClick={closeReplay}>✕ Close</button>
+              </div>
             </div>
             <div className="modal-body">
               {replayLoading && (

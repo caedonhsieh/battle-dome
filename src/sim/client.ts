@@ -59,6 +59,8 @@ export interface ReplayRequest {
   refPaste: string;
   seed: string;
   matchupIndex: number;
+  /** 0-based battle within the matchup; seed is derived per battle, so any index reproduces exactly */
+  battleIndex: number;
 }
 
 export interface ReplayResult {
@@ -69,7 +71,7 @@ export interface ReplayResult {
 }
 
 /**
- * Re-simulate battle 0 of a matchup in the worker and resolve with its full
+ * Re-simulate one battle of a matchup in the worker and resolve with its full
  * protocol log. Battles are deterministic (seed + SplitMix32 + argmax), so
  * this reproduces the exact battle from the original run. Coexists with a
  * startRun-attached onmessage handler; do not call while a run is active.
@@ -79,6 +81,7 @@ export function requestReplay(worker: Worker, req: ReplayRequest): Promise<Repla
     const onMsg = (e: MessageEvent) => {
       const m = e.data as any;
       if (m.matchupIndex !== req.matchupIndex) return;
+      if (m.battleIndex !== req.battleIndex) return;
       if (m.type === 'replay-log') {
         worker.removeEventListener('message', onMsg);
         resolve(m as ReplayResult);
