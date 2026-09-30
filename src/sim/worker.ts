@@ -65,6 +65,8 @@ export interface MatchupResult {
   wins: number;
   losses: number;
   draws: number;
+  /** Original index in the benchmark's ref list (for deterministic replay seeds). */
+  matchupIndex: number;
   /** Per-battle results (winner, turns, mons remaining). Absent on runs recorded before this field existed. */
   battles?: BattleScore[];
 }

@@ -61,7 +61,7 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
    */
   const runReplay = async (r: MatchupResult, battleIndex: number) => {
     if (!current || runActive || replayLoading) return;
-    const matchupIndex = current.results.indexOf(r);
+    const matchupIndex = r.matchupIndex ?? current.results.indexOf(r);
     const userPaste = current.meta.userPaste ?? getUserPaste(current.meta.teamName);
     const refPaste = getRefPaste(r.refId);
     if (!userPaste || !refPaste || matchupIndex < 0) return;

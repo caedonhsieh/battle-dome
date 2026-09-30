@@ -86,13 +86,14 @@ export function useBenchmarkRun() {
 
       const workers = assignments.map(() => createBenchmarkWorker());
       workersRef.current = workers;
-      const initialResults: MatchupResult[] = job.refs.map((r) => ({
+      const initialResults: MatchupResult[] = job.refs.map((r, idx) => ({
         refId: r.id,
         name: r.name,
         archetype: r.archetype,
         wins: 0,
         losses: 0,
         draws: 0,
+        matchupIndex: idx,
         battles: [],
       }));
       setState({
