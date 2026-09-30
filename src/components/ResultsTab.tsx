@@ -323,20 +323,21 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
       )}
 
       <h3>Save Files ({history.length})</h3>
-      <p className="muted tiny">Saved in your browser. Load, rename, or delete past runs.</p>
+      <div className="save-prompt">Which file would you like to load?</div>
       <div className="save-files">
         {history.length === 0 && (
-          <div className="save-slot empty">
-            <span className="save-file-no">— EMPTY SLOT —</span>
-            <span className="muted tiny">Completed runs save here automatically.</span>
+          <div className="save-data empty">
+            <div className="save-data-head">NO SAVE DATA</div>
+            <div className="muted tiny">Completed runs save here automatically.</div>
           </div>
         )}
         {history.map((h, i) => {
           const t = summarize(h.results);
+          const elapsed = h.meta.durationMs != null ? fmtElapsed(h.meta.durationMs / 1000) : null;
           return (
-            <div key={h.id} className="save-slot">
-              <div className="save-slot-head">
-                <span className="save-file-no">FILE {i + 1}</span>
+            <div key={h.id} className="save-data">
+              <div className="save-data-head">
+                <span>FILE {i + 1}</span>
                 {h.meta.partial && <span className="badge partial-badge">Partial</span>}
               </div>
               {renamingId === h.id ? (
@@ -352,18 +353,19 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                   <button className="btn small ghost" onClick={() => setRenamingId(null)}>Cancel</button>
                 </span>
               ) : (
-                <div className="save-name">{h.name}</div>
+                <div className="save-data-title">{h.name}</div>
               )}
-              <div className="save-meta">
-                {h.meta.teamName} · {new Date(h.date).toLocaleString()} ·{' '}
-                <ScoreLine wins={t.wins} losses={t.losses} draws={t.draws} /> ·{' '}
-                {h.meta.battlesPerMatchup}/matchup · seed “{h.meta.seed}” ·{' '}
-                {h.meta.engine === METAMON_ENGINE
+              <dl className="save-rows">
+                <div><dt>TEAM</dt><dd>{h.meta.teamName}</dd></div>
+                <div><dt>DATE</dt><dd>{new Date(h.date).toLocaleDateString()} {new Date(h.date).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}</dd></div>
+                <div><dt>RECORD</dt><dd><ScoreLine wins={t.wins} losses={t.losses} draws={t.draws} /></dd></div>
+                {elapsed && <div><dt>TIME</dt><dd>{elapsed}</dd></div>}
+                <div><dt>ENGINE</dt><dd>{h.meta.engine === METAMON_ENGINE
                   ? `Metamon${h.meta.provider ? ` · ${h.meta.provider === 'webgpu' ? 'WebGPU' : 'WASM'}` : ''}`
-                  : 'heuristic'}
-              </div>
+                  : 'heuristic'}</dd></div>
+              </dl>
               <div className="save-actions">
-                <button className="btn small primary" onClick={() => onViewRecord(h)}>▶ Load</button>
+                <button className="btn small primary" onClick={() => onViewRecord(h)}>▶ CONTINUE</button>
                 <button
                   className="btn small ghost"
                   onClick={() => {

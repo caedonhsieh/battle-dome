@@ -10,6 +10,8 @@ export interface SetSummary {
   evs: string;
   teraType: string;
   moves: string[];
+  /** level from the export (defaults to 100) */
+  level: number;
   /** sprite-sheet CSS for the 40x30 pixel-art menu icon, or null for the initials fallback */
   iconCss: CSSProperties | null;
 }
@@ -55,6 +57,7 @@ export function parseSets(paste: string): SetSummary[] {
       evs: formatEvs(set.evs),
       teraType: set.teraType || (set as any).tera_type || '',
       moves: (set.moves || []).filter(Boolean),
+      level: set.level || 100,
       iconCss,
     };
   });

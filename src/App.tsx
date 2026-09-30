@@ -197,6 +197,8 @@ export default function App() {
             onSelectionChange={setSelectedRefIds}
             customRefs={customRefs}
             onCustomRefsChange={setCustomRefs}
+            userTeamName={teams.find((t) => t.id === selectedTeamId)?.name ?? null}
+            userPaste={teams.find((t) => t.id === selectedTeamId)?.paste ?? null}
           />
         )}
         {tab === 'run' && (

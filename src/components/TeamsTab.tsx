@@ -94,10 +94,11 @@ export default function TeamsTab({teams, onChange, selectedTeamId, onSelect}: Pr
       <div className="party-list">
         {teams.map((t) => {
           const sets = parseSets(t.paste).slice(0, 6);
+          const [lead, ...rest] = sets;
           const active = selectedTeamId === t.id;
           return (
             <div key={t.id} className={`party-screen ${active ? 'active' : ''}`}>
-              <div className="party-head">
+              <div className="party-title-row">
                 {renamingId === t.id ? (
                   <span className="inline-form">
                     <input
@@ -137,21 +138,42 @@ export default function TeamsTab({teams, onChange, selectedTeamId, onSelect}: Pr
                   </button>
                 </div>
               </div>
-              <div className="party-mons">
-                {sets.map((s, i) => (
-                  <div key={i} className="party-mon">
-                    {s.iconCss ? (
-                      <span className="mini-icon" style={s.iconCss} aria-hidden="true" />
+              <div className="party-body">
+                {lead && (
+                  <div className={`party-lead ${active ? 'active' : ''}`}>
+                    {lead.iconCss ? (
+                      <span className="mini-icon lead-sprite" style={lead.iconCss} aria-hidden="true" />
                     ) : (
-                      <span className="sprite-fallback">{speciesInitials(s.species)}</span>
+                      <span className="sprite-fallback">{speciesInitials(lead.species)}</span>
                     )}
-                    <span className="party-mon-info">
-                      <span className="party-mon-name">{s.species}</span>
-                      {s.item && <span className="party-mon-item">@ {s.item}</span>}
-                    </span>
+                    <div className="party-lead-name">{lead.species}</div>
+                    <div className="party-lead-lv">Lv{lead.level}</div>
+                    <div className="hp-bar" aria-hidden="true"><span className="hp-fill" /></div>
                   </div>
-                ))}
+                )}
+                <div className="party-bars">
+                  {rest.map((s, i) => (
+                    <div key={i} className="party-bar">
+                      <span className="party-ball" aria-hidden="true">
+                        {s.iconCss ? (
+                          <span className="mini-icon" style={s.iconCss} />
+                        ) : (
+                          <span className="sprite-fallback">{speciesInitials(s.species)}</span>
+                        )}
+                      </span>
+                      <span className="party-bar-main">
+                        <span className="party-bar-name">{s.species}</span>
+                        <span className="hp-bar small" aria-hidden="true"><span className="hp-fill" /></span>
+                      </span>
+                      <span className="party-bar-side">
+                        <span className="party-bar-lv">Lv{s.level}</span>
+                        {s.item && <span className="party-bar-item">@ {s.item}</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
+              <div className="party-msgbox">Choose a party for the next run.</div>
               <div className="muted tiny party-foot">
                 Saved {new Date(t.createdAt).toLocaleDateString()}
               </div>

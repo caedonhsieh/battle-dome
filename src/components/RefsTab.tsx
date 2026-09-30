@@ -13,9 +13,12 @@ interface Props {
   onSelectionChange: (ids: string[]) => void;
   customRefs: CustomRef[];
   onCustomRefsChange: (refs: CustomRef[]) => void;
+  /** the user's currently selected party (shown as the player side of the VS banner) */
+  userTeamName?: string | null;
+  userPaste?: string | null;
 }
 
-export default function RefsTab({selectedRefIds, onSelectionChange, customRefs, onCustomRefsChange}: Props) {
+export default function RefsTab({selectedRefIds, onSelectionChange, customRefs, onCustomRefsChange, userTeamName, userPaste}: Props) {
   const [filter, setFilter] = useState<string>('All');
   const [paste, setPaste] = useState('');
   const [name, setName] = useState('');
@@ -26,6 +29,56 @@ export default function RefsTab({selectedRefIds, onSelectionChange, customRefs, 
     () => (filter === 'All' ? BUNDLED : BUNDLED.filter((t) => t.archetype === filter)),
     [filter],
   );
+
+  const userSets = useMemo(
+    () => (userPaste ? parseSets(userPaste).slice(0, 6) : []),
+    [userPaste],
+  );
+
+  function foeCard(
+    id: string,
+    name: string,
+    archetype: string,
+    paste: string,
+    sub: React.ReactNode,
+    extraActions?: React.ReactNode,
+  ) {
+    const sets = parseSets(paste).slice(0, 6);
+    const sel = selectedRefIds.includes(id);
+    return (
+      <label key={id} className={`foe-box ${sel ? 'selected' : ''}`}>
+        <input
+          type="checkbox"
+          className="preview-check"
+          checked={sel}
+          onChange={() => toggle(id)}
+        />
+        <span className="foe-cursor" aria-hidden="true">{sel ? '▶' : '▷'}</span>
+        <span className="foe-main">
+          <span className="foe-name-row">
+            <span className="foe-name">{name}</span>
+            <span className={`badge arch-${archetype.replace(/\s/g, '')}`}>{archetype}</span>
+            {extraActions}
+          </span>
+          <span className="foe-sub">{sub}</span>
+          <span className="foe-sprites" aria-hidden="true">
+            {sets.map((s, i) => (
+              <span key={i} className="foe-slot" title={s.species}>
+                {s.iconCss ? (
+                  <span className="mini-icon" style={s.iconCss} />
+                ) : (
+                  <span className="sprite-fallback">{speciesInitials(s.species)}</span>
+                )}
+              </span>
+            ))}
+          </span>
+          <span className="hp-bar target-meter" aria-hidden="true">
+            <span className="hp-fill" style={{width: sel ? '100%' : '0%'}} />
+          </span>
+        </span>
+      </label>
+    );
+  }
 
   const toggle = (id: string) => {
     onSelectionChange(
@@ -79,6 +132,20 @@ export default function RefsTab({selectedRefIds, onSelectionChange, customRefs, 
         . Select the teams your team will face, or add your own.
       </p>
 
+      <div className="vs-banner" aria-label="Matchup preview">
+        <div className="healthbox enemy">
+          <div className="hb-name">{selectedRefIds.length} FOE{selectedRefIds.length === 1 ? '' : 'S'}</div>
+          <div className="hb-sub">selected for battle</div>
+        </div>
+        <div className="vs-burst">VS</div>
+        <div className="healthbox player">
+          <div className="hb-name">{userTeamName || 'NO PARTY'}</div>
+          <div className="hb-sub">
+            {userSets.length > 0 ? `${userSets.length} Pokémon` : 'pick a party first'}
+          </div>
+        </div>
+      </div>
+
       <div className="filter-row">
         {['All', ...ARCHETYPES].map((a) => (
           <button
@@ -98,43 +165,21 @@ export default function RefsTab({selectedRefIds, onSelectionChange, customRefs, 
         </button>
       </div>
 
-      <div className="preview-list">
-        {visible.map((t) => {
-          const sets = parseSets(t.paste).slice(0, 6);
-          const sel = selectedRefIds.includes(t.id);
-          return (
-            <label key={t.id} className={`preview-card ${sel ? 'selected' : ''}`}>
-              <input
-                type="checkbox"
-                className="preview-check"
-                checked={sel}
-                onChange={() => toggle(t.id)}
-              />
-              <div className="preview-banner">
-                <span className="preview-cursor" aria-hidden="true">{sel ? '▶' : '▷'}</span>
-                <span className="preview-foe-name">{t.name}</span>
-                <span className={`badge arch-${t.archetype.replace(/\s/g, '')}`}>{t.archetype}</span>
-              </div>
-              <div className="preview-row" aria-hidden="true">
-                {sets.map((s, i) => (
-                  <span key={i} className="preview-slot" title={s.species}>
-                    {s.iconCss ? (
-                      <span className="mini-icon" style={s.iconCss} />
-                    ) : (
-                      <span className="sprite-fallback">{speciesInitials(s.species)}</span>
-                    )}
-                  </span>
-                ))}
-              </div>
-              <div className="muted tiny preview-sub">
-                by {t.author} ·{' '}
-                <a href={t.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
-                  pokepaste
-                </a>
-              </div>
-            </label>
-          );
-        })}
+      <div className="foe-list">
+        {visible.map((t) =>
+          foeCard(
+            t.id,
+            t.name,
+            t.archetype,
+            t.paste,
+            <>
+              by {t.author} ·{' '}
+              <a href={t.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                pokepaste
+              </a>
+            </>,
+          ),
+        )}
       </div>
 
       <h3>Custom reference teams ({customRefs.length})</h3>
@@ -167,50 +212,31 @@ export default function RefsTab({selectedRefIds, onSelectionChange, customRefs, 
           Validate &amp; add reference
         </button>
       </div>
-      <div className="preview-list">
-        {customRefs.map((r) => {
-          const sets = parseSets(r.paste).slice(0, 6);
-          const sel = selectedRefIds.includes(r.id);
-          return (
-            <label key={r.id} className={`preview-card ${sel ? 'selected' : ''}`}>
-              <input
-                type="checkbox"
-                className="preview-check"
-                checked={sel}
-                onChange={() => toggle(r.id)}
-              />
-              <div className="preview-banner">
-                <span className="preview-cursor" aria-hidden="true">{sel ? '▶' : '▷'}</span>
-                <span className="preview-foe-name">{r.name}</span>
-                <span className={`badge arch-${r.archetype.replace(/\s/g, '')}`}>{r.archetype}</span>
-                <span className="badge">custom</span>
-                <span className="spacer" />
-                <button
-                  type="button"
-                  className="btn small danger"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleDeleteCustom(r.id);
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-              <div className="preview-row" aria-hidden="true">
-                {sets.map((s, i) => (
-                  <span key={i} className="preview-slot" title={s.species}>
-                    {s.iconCss ? (
-                      <span className="mini-icon" style={s.iconCss} />
-                    ) : (
-                      <span className="sprite-fallback">{speciesInitials(s.species)}</span>
-                    )}
-                  </span>
-                ))}
-              </div>
-            </label>
-          );
-        })}
+      <div className="foe-list">
+        {customRefs.map((r) =>
+          foeCard(
+            r.id,
+            r.name,
+            r.archetype,
+            r.paste,
+            <>custom team · saved {new Date(r.createdAt).toLocaleDateString()}</>,
+            <>
+              <span className="badge">custom</span>
+              <span className="spacer" />
+              <button
+                type="button"
+                className="btn small danger"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleDeleteCustom(r.id);
+                }}
+              >
+                Delete
+              </button>
+            </>,
+          ),
+        )}
       </div>
     </div>
   );
