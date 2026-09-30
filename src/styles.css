@@ -395,3 +395,15 @@ a { color: var(--accent); }
 .replay-info { color: var(--muted); font-size: 0.78rem; }
 .replay-result { font-weight: 700; color: var(--win); margin-top: 10px; }
 .replay-loading, .replay-error { padding: 24px 0; text-align: center; }
+
+/* Live run feedback */
+.live-results { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+.mini-list {
+  list-style: none; margin: 6px 0 0; padding: 0;
+  max-height: 190px; overflow-y: auto; font-size: 0.8rem;
+}
+.mini-list li {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 3px 0; border-bottom: 1px dashed var(--border);
+}
+.mini-list li:last-child { border-bottom: none; }

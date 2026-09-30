@@ -1,3 +1,4 @@
+import {useEffect, useState} from 'react';
 import type {RunConfig, RunMeta, SavedTeam} from '../lib/types';
 import {randomSeed} from '../lib/types';
 import type {RunState} from '../lib/useBenchmarkRun';
@@ -52,6 +53,15 @@ export function summarize(results: MatchupResult[]): {wins: number; losses: numb
   );
 }
 
+function fmtEta(totalSec: number): string {
+  if (!isFinite(totalSec) || totalSec < 0) return '';
+  const s = Math.round(totalSec);
+  if (s < 60) return `≈ ${s}s left`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `≈ ${m}m ${String(s % 60).padStart(2, '0')}s left`;
+  return `≈ ${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m left`;
+}
+
 export default function RunTab({
   teams,
   selectedTeamId,
@@ -71,6 +81,22 @@ export default function RunTab({
   const pct = totalBattles > 0 ? Math.min(100, (doneBattles / totalBattles) * 100) : 0;
   const canStart = !running && selectedTeamId && selectedRefs.length > 0;
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
+
+  // Tick once a second while running so the ETA stays fresh.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [running]);
+
+  const liveTotals = summarize(runState.results);
+  const liveGrand = liveTotals.wins + liveTotals.losses + liveTotals.draws;
+  let etaText = '';
+  if (running && runState.startedAt && doneBattles > 0 && totalBattles > doneBattles) {
+    const elapsedSec = Math.max(1, (now - runState.startedAt) / 1000);
+    etaText = fmtEta((elapsedSec / doneBattles) * (totalBattles - doneBattles));
+  }
 
   return (
     <div className="panel">
@@ -180,8 +206,33 @@ export default function RunTab({
               <p className="muted">
                 {p.matchupName} — battle {p.battle}/{p.battlesPerMatchup} · matchup{' '}
                 {p.matchupIndex + 1}/{p.matchupsTotal} · {doneBattles}/{totalBattles} battles
+                {etaText && <> · {etaText}</>}
               </p>
             </>
+          )}
+          {running && p && !mp && runState.results.length > 0 && (
+            <div className="live-results">
+              <p className="muted tiny">
+                Running total:{' '}
+                <strong className="win-t">{liveTotals.wins}W</strong> /{' '}
+                <strong className="loss-t">{liveTotals.losses}L</strong> / {liveTotals.draws}D
+                {liveGrand > 0 && ` (${Math.round((liveTotals.wins / liveGrand) * 100)}%)`}
+              </p>
+              <ul className="mini-list">
+                {[...runState.results].reverse().map((r) => {
+                  const t = r.wins + r.losses + r.draws;
+                  return (
+                    <li key={r.refId}>
+                      <span>{r.name}</span>
+                      <span className="num">
+                        {r.wins}W / {r.losses}L / {r.draws}D
+                        {t > 0 && ` (${Math.round((r.wins / t) * 100)}%)`}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           )}
           {running && !p && !mp && <p className="muted">Starting worker…</p>}
           {runState.status === 'error' && (

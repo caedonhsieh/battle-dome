@@ -10,6 +10,8 @@ export interface RunState {
   modelProgress: ModelProgressMsg | null;
   /** Which ONNX execution provider the worker initialized (null until known). */
   provider: MetamonProvider | null;
+  /** Wall-clock ms when the first battle started (excludes model download/load). */
+  startedAt: number | null;
   results: MatchupResult[];
   error: string | null;
 }
@@ -26,6 +28,7 @@ export function useBenchmarkRun() {
     progress: null,
     modelProgress: null,
     provider: null,
+    startedAt: null,
     results: [],
     error: null,
   });
@@ -45,14 +48,19 @@ export function useBenchmarkRun() {
       stopWorker();
       const worker = createBenchmarkWorker();
       workerRef.current = worker;
-      setState({status: 'running', progress: null, modelProgress: null, provider: null, results: [], error: null});
+      setState({status: 'running', progress: null, modelProgress: null, provider: null, startedAt: null, results: [], error: null});
       const cancel = startRun(worker, job, {
         onModelProgress: (modelProgress) =>
           setState((s) => ({...s, modelProgress})),
         onProvider: (provider) =>
           setState((s) => ({...s, provider})),
         onProgress: (progress) =>
-          setState((s) => ({...s, progress, modelProgress: null})),
+          setState((s) => ({
+            ...s,
+            progress,
+            modelProgress: null,
+            startedAt: s.startedAt ?? Date.now(),
+          })),
         onMatchup: (_index, result) =>
           setState((s) => ({...s, results: [...s.results, result]})),
         onDone: (results) => {
@@ -93,7 +101,7 @@ export function useBenchmarkRun() {
 
   const reset = useCallback(() => {
     stopWorker();
-    setState({status: 'idle', progress: null, modelProgress: null, provider: null, results: [], error: null});
+    setState({status: 'idle', progress: null, modelProgress: null, provider: null, startedAt: null, results: [], error: null});
   }, [stopWorker]);
 
   return {state, start, cancel, reset, replay, running: state.status === 'running'};
