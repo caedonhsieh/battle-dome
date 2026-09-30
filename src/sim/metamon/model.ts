@@ -149,8 +149,10 @@ export async function loadMetamonSession(onProgress: ProgressFn): Promise<Metamo
     const gpu = await ort.InferenceSession.create(buf, {executionProviders: ['webgpu']});
     await warmup(gpu);
     return {session: gpu, provider: 'webgpu'};
-  } catch {
+  } catch (err) {
     // WebGPU unavailable or rejected the graph — WASM fallback.
+    // Log the real reason; otherwise a silent fallback is undebuggable.
+    console.warn('[metamon] WebGPU session failed, falling back to WASM:', err);
     const wasm = await ort.InferenceSession.create(buf, {executionProviders: ['wasm']});
     await warmup(wasm);
     return {session: wasm, provider: 'wasm'};
