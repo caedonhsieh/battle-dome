@@ -4,6 +4,7 @@ import type {RunMeta, RunRecord} from '../lib/types';
 import {summarize} from './RunTab';
 import SpriteStrip from './SpriteStrip';
 import {formatReplayLog, type ReplayLine} from './replayFormat';
+import {buildReplayHtml} from './replayHtml';
 
 interface ViewData {
   meta: RunMeta;
@@ -117,6 +118,21 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
     const slug = replayTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     a.href = url;
     a.download = `battle-dome-${slug || 'replay'}.log`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadReplayHtml = () => {
+    if (!replayRawLog || !replayTitle || !replayMatchup || !current) return;
+    const html = buildReplayHtml(replayRawLog, current.meta.teamName, replayMatchup.name);
+    const blob = new Blob([html], {type: 'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const slug = replayTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    a.href = url;
+    a.download = `battle-dome-${slug || 'replay'}.html`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -413,6 +429,13 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                       {replayCopied ? '✓ Copied' : '⧉ Copy log'}
                     </button>
                     <button className="btn small ghost" onClick={downloadReplayLog}>⬇ .log</button>
+                    <button
+                      className="btn small ghost"
+                      onClick={downloadReplayHtml}
+                      title="Download an animated replay page (rendered by Showdown's client)"
+                    >
+                      ⬇ .html
+                    </button>
                   </>
                 )}
                 <button className="btn small ghost" onClick={closeReplay}>✕ Close</button>
@@ -421,8 +444,8 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
             <div className="modal-body">
               {replayRawLog && !replayLoading && (
                 <p className="muted tiny" style={{margin: '0 0 8px'}}>
-                  Standard Showdown battle log — copy or download the .log and feed it to a
-                  replay converter to generate a visual replay.
+                  Standard Showdown battle log — copy or download the .log for replay
+                  converters, or grab the .html for an animated replay page.
                 </p>
               )}
               {replayLoading && (
