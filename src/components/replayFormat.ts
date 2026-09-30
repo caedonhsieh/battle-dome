@@ -79,7 +79,7 @@ function residualLine(label: string, from: string): string | null {
 const SKIP = new Set([
   'init', 'title', 'j', 'player', 'gametype', 'gen', 'tier', 'rated', 'rule',
   'clearpoke', 'poke', 'teamsize', 'start', 'upkeep', 'inactive', 'html',
-  'teampreview', 'done', 't:',
+  'teampreview', 'done', 't:', '-singleturn',
 ]);
 
 /**
@@ -113,18 +113,27 @@ function canonicalLines(log: string[]): string[] {
 
 export function formatReplayLog(log: string[], p1Name: string, p2Name: string): ReplayLine[] {
   const out: ReplayLine[] = [];
+  // p1 is always the user's team in the replay dialog, p2 the reference
+  // team — so the log reads like the games: your mons plain, theirs "Foe".
+  // This keeps every line short instead of repeating 40-char team names.
   const who = (field: string): string => {
     const s = parseSlot(field);
     if (!s) return field;
-    const team = s.side === 'p1' ? p1Name : p2Name;
-    return `${team}\u2019s ${s.nick}`;
+    return s.side === 'p1' ? s.nick : `Foe ${s.nick}`;
+  };
+  const sideTeam = (field: string): string => {
+    const s = parseSlot(field);
+    if (!s) return field;
+    return s.side === 'p1' ? 'your team' : 'the foe\u2019s team';
   };
   const info = (text: string) => out.push({text, kind: 'info'});
   const event = (text: string) => out.push({text, kind: 'event'});
   /** Last known HP fraction per side, so damage lines can report deltas. */
   const hp = new Map<string, number>();
 
-  for (const raw of canonicalLines(log)) {
+  const lines = canonicalLines(log);
+  for (let idx = 0; idx < lines.length; idx++) {
+    const raw = lines[idx];
     const parts = raw.slice(1).split('|');
     const cmd = parts[0];
     if (SKIP.has(cmd)) continue;
@@ -137,13 +146,16 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
       case 'drag': {
         const s = parseSlot(parts[1]);
         const species = (parts[2] || '').split(',')[0].trim();
-        const label = s ? `${s.side === 'p1' ? p1Name : p2Name}\u2019s ${s.nick}` : parts[1];
         const extra = s && species && species !== s.nick ? ` (${species})` : '';
+        const verb = cmd === 'drag' ? 'was dragged out' : 'was sent out';
+        const label = s
+          ? (s.side === 'p1' ? `Your ${s.nick}` : `Foe ${s.nick}`)
+          : parts[1];
         if (s) {
           const f = parseHPFrac(parts[3]);
           hp.set(s.side, f ?? 1);
         }
-        event(`${label}${extra} ${cmd === 'drag' ? 'was dragged out' : 'was sent out'}!`);
+        event(`${label}${extra} ${verb}!`);
         break;
       }
       case 'move':
@@ -156,9 +168,13 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
         break;
       }
       case 'win': {
-        // The raw log's |win| line carries the side's display name
-        // (battle.join is given the team names), so use it directly.
-        out.push({text: `${parts[1]} wins the battle!`, kind: 'result'});
+        // p1 is the user's team, p2 the reference team.
+        const name = parts[1];
+        const text =
+          name === p1Name ? 'You win the battle!' :
+          name === p2Name ? 'The foe wins the battle!' :
+          `${name} wins the battle!`;
+        out.push({text, kind: 'result'});
         break;
       }
       case 'tie':
@@ -172,7 +188,7 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
         break;
       case '-status': {
         const s = parseSlot(parts[1]);
-        const label = s ? `${s.side === 'p1' ? p1Name : p2Name}\u2019s ${s.nick}` : parts[1];
+        const label = s ? who(parts[1]) : parts[1];
         event(`${label} ${STATUS_NAMES[parts[2]] ?? `was afflicted (${parts[2]})`}!`);
         break;
       }
@@ -182,9 +198,14 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
       case 'cant':
         event(`${who(parts[1])} couldn't move!`);
         break;
-      case '-miss':
-        event(`But it missed ${who(parts[1])}!`);
+      case '-miss': {
+        // Protocol: |-miss|USER|TARGET — parts[1] is the one who attacked.
+        const target = parseSlot(parts[2] || '');
+        event(target
+          ? `${who(parts[1])}'s attack missed ${who(parts[2])}!`
+          : 'But it missed!');
         break;
+      }
       case '-supereffective':
         info("It's super effective!");
         break;
@@ -222,17 +243,13 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
         event(`${(parts[1] || '').replace(/^move:\s*/, '')} faded.`);
         break;
       case '-sidestart': {
-        const s = parseSlot(parts[1]);
-        const team = s ? (s.side === 'p1' ? p1Name : p2Name) : parts[1];
         const move = (parts[2] || '').replace(/^move:\s*/, '');
-        event(`${HAZARD_NAMES[move] ?? `${move} was set up`} around ${team}'s team!`);
+        event(`${HAZARD_NAMES[move] ?? `${move} was set up`} around ${sideTeam(parts[1])}!`);
         break;
       }
       case '-sideend': {
-        const s = parseSlot(parts[1]);
-        const team = s ? (s.side === 'p1' ? p1Name : p2Name) : parts[1];
         const move = (parts[2] || '').replace(/^move:\s*/, '');
-        event(`${move} around ${team}'s team wore off.`);
+        event(`${move} around ${sideTeam(parts[1])} wore off.`);
         break;
       }
       case '-ability':
@@ -243,6 +260,10 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
         if (!what) break;
         if (what === 'confusion') {
           event(`${who(parts[1])} became confused!`);
+          break;
+        }
+        if (what === 'Substitute') {
+          event(`${who(parts[1])} put out a Substitute!`);
           break;
         }
         const proto = /^(protosynthesis|quarkdrive)(atk|def|spa|spd|spe)?$/i.exec(what);
@@ -258,8 +279,13 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
         break;
       }
       case '-end': {
-        const what = (parts[2] || '').replace(/^move:\s*/, '');
+        const what = (parts[2] || '').replace(/^move:\s*/i, '');
         if (!what) break;
+        const ab = /^ability:\s*(.+)$/i.exec(what);
+        if (ab) {
+          event(`${who(parts[1])}'s ${ab[1]} wore off.`);
+          break;
+        }
         const pretty = what
           .replace(/^protosynthesis/i, 'Protosynthesis')
           .replace(/^quarkdrive/i, 'Quark Drive');
@@ -268,7 +294,11 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
       }
       case '-activate': {
         const target = who(parts[1]);
-        const what = parts.slice(2).join(' ')
+        const rawWhat = parts.slice(2).join(' ').trim();
+        // A bare "move: X" activation just re-states the move that was
+        // already narrated by the |move| line — skip the duplicate.
+        if (/^move:/i.test(rawWhat)) break;
+        const what = rawWhat
           .replace(/\[fromitem\]/gi, '(from its item)')
           .replace(/\[from\]/gi, 'from')
           .trim();
@@ -284,15 +314,62 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
         }
         break;
       }
+      case '-hitcount':
+        event(`Hit ${parts[2] || '?'} time${parts[2] === '1' ? '' : 's'}!`);
+        break;
       case '-immune':
         event(`It doesn't affect ${who(parts[1])}…`);
         break;
       case '-fail':
         event('But it failed!');
         break;
-      case '-enditem':
-        event(`${who(parts[1])}'s ${parts[2] || 'item'} was used up!`);
+      case '-enditem': {
+        const label = who(parts[1]);
+        const item = parts[2] || 'item';
+        const from = fromSource(parts);
+        if (from) {
+          if (/^move:\s*knock off$/i.test(from)) {
+            event(`${label}'s ${item} was knocked off!`);
+            break;
+          }
+          if (/^\[eat\]$/i.test(from)) {
+            event(`${label} ate its ${item}!`);
+            break;
+          }
+        }
+        event(`${label}'s ${item} was used up!`);
         break;
+      }
+      case '-item': {
+        // Trick / Switcheroo come as a pair of -item lines (each holder ends
+        // up with the other's item) — narrate the swap as one line.
+        const from = fromSource(parts);
+        const move = from ? (/^move:\s*(.+)$/i.exec(from) || [])[1] : null;
+        const label = who(parts[1]);
+        const item = parts[2] || 'item';
+        if (move && /^(trick|switcheroo)$/i.test(move)) {
+          const nxt = lines[idx + 1];
+          if (nxt) {
+            const np = nxt.slice(1).split('|');
+            const nfrom = np[0] === '-item' ? fromSource(np) : null;
+            if (nfrom && /^move:\s*(trick|switcheroo)$/i.test(nfrom)) {
+              // parts[1] now holds `item`; np[1] now holds np[2] — each gave
+              // the other the item it used to hold.
+              event(`${label} swapped its ${np[2] || 'item'} for ${who(np[1])}'s ${item}!`);
+              idx++; // consume the second half of the swap
+              break;
+            }
+          }
+          event(`${label} received the ${item}!`);
+          break;
+        }
+        if (move && /^(thief|covet)$/i.test(move)) {
+          event(`${label} stole the ${item}!`);
+          break;
+        }
+        event(`${label} obtained the ${item}!`);
+        break;
+      }
       case '-damage':
       case '-sethp': {
         const s = parseSlot(parts[1]);
@@ -327,8 +404,23 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
         const cur = parseHPFrac(parts[2]);
         const prev = hp.get(key);
         if (cur !== null) hp.set(key, cur);
+        const from = fromSource(parts);
+        const itemM = from ? /^item:\s*(.+)$/i.exec(from) : null;
+        if (itemM) {
+          // Routine item recovery (Leftovers etc.) — attribute it and keep it
+          // quiet rather than a full event line.
+          info(`${label} restored HP with its ${itemM[1]}!`);
+          break;
+        }
+        const abM = from ? /^ability:\s*(.+)$/i.exec(from) : null;
+        if (abM) {
+          info(`${label} restored HP with its ${abM[1]}!`);
+          break;
+        }
         if (prev !== undefined && cur !== null && cur > prev) {
-          event(`${label} regained ${Math.round((cur - prev) * 100)}% of its health!`);
+          const delta = Math.round((cur - prev) * 100);
+          if (delta > 0) event(`${label} regained ${delta}% of its health!`);
+          // delta 0 (rounding) means nothing visible happened — stay quiet.
         } else {
           event(`${label} restored its health!`);
         }
