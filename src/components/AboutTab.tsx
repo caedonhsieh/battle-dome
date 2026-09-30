@@ -35,8 +35,8 @@ export default function AboutTab() {
             same matchup order = same results. Change the seed to sample different RNG.
           </li>
           <li>
-            <strong>Where it runs.</strong> The model (~95MB) downloads once from a public
-            release and is cached in your browser's IndexedDB. Inference runs on-device via{' '}
+            <strong>Where it runs.</strong> The model (~95MB) downloads once from this
+            site's own hosting and is cached in your browser's IndexedDB. Inference runs on-device via{' '}
             <code>onnxruntime-web</code> — WebGPU when available, WASM otherwise (roughly a
             second per decision on WASM). Nothing about your teams leaves your browser.
           </li>
