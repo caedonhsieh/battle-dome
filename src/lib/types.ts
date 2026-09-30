@@ -41,6 +41,8 @@ export interface RunMeta {
   provider?: 'webgpu' | 'wasm';
   /** The user's team paste at run time (for replays). Absent on old runs. */
   userPaste?: string;
+  /** True when the run was cancelled and only partial results were kept. */
+  partial?: boolean;
 }
 
 export interface RunRecord {

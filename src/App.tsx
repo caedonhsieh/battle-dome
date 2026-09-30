@@ -26,7 +26,10 @@ export default function App() {
 
   const run = useBenchmarkRun();
   const metaRef = useRef<RunMeta | null>(null);
+  /** Snapshot of the refs at run start (selection may change mid-run). */
+  const refsRef = useRef<RefTeam[]>([]);
   const savedRunRef = useRef(false);
+  const cancelChoiceRef = useRef<'keep' | 'discard' | null>(null);
 
   // persist state slices
   useEffect(() => store.setTeams(teams), [teams]);
@@ -77,6 +80,7 @@ export default function App() {
     const built = buildJob(teams, selectedTeamId, selectedRefs, config);
     if (!built) return;
     metaRef.current = built.meta;
+    refsRef.current = built.job.refs;
     savedRunRef.current = false;
     run.start(built.job);
     setTab('run');
@@ -93,14 +97,63 @@ export default function App() {
         name: `${meta.teamName} — ${new Date(meta.date).toLocaleDateString()} ${new Date(meta.date).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`,
         date: meta.date,
         meta,
-        refs: selectedRefs.map((r) => ({id: r.id, name: r.name, archetype: r.archetype})),
+        refs: refsRef.current.map((r) => ({id: r.id, name: r.name, archetype: r.archetype})),
         results: run.state.results,
       };
       setHistory((h) => [record, ...h]);
       setCurrentView(record);
       setTab('results');
     }
-  }, [run.state.status, run.state.results, selectedRefs]);
+  }, [run.state.status, run.state.results]);
+
+  const handleCancel = useCallback(
+    (choice: 'keep' | 'discard') => {
+      cancelChoiceRef.current = choice;
+      run.cancel();
+    },
+    [run],
+  );
+
+  // Handle the worker's cancel acknowledgement: keep -> save partial results
+  // as a run record (including the in-progress matchup's tally); discard ->
+  // drop them. Either way the run state is reset afterwards.
+  useEffect(() => {
+    if (run.state.status !== 'cancelled') return;
+    const choice = cancelChoiceRef.current;
+    cancelChoiceRef.current = null;
+    if (choice === 'keep' && metaRef.current) {
+      savedRunRef.current = true;
+      const meta: RunMeta = {...metaRef.current, partial: true};
+      if (run.state.provider) meta.provider = run.state.provider;
+      const results = [...run.state.results];
+      const p = run.state.progress;
+      if (p && p.matchupWins + p.matchupLosses + p.matchupDraws > 0) {
+        const ref = refsRef.current[p.matchupIndex];
+        if (ref && !results.some((r) => r.refId === ref.id)) {
+          results.push({
+            refId: ref.id,
+            name: ref.name,
+            archetype: ref.archetype,
+            wins: p.matchupWins,
+            losses: p.matchupLosses,
+            draws: p.matchupDraws,
+          });
+        }
+      }
+      const record: RunRecord = {
+        id: uid(),
+        name: `${meta.teamName} — ${new Date(meta.date).toLocaleDateString()} ${new Date(meta.date).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} (partial)`,
+        date: meta.date,
+        meta,
+        refs: refsRef.current.map((r) => ({id: r.id, name: r.name, archetype: r.archetype})),
+        results,
+      };
+      setHistory((h) => [record, ...h]);
+      setCurrentView(record);
+      setTab('results');
+    }
+    run.reset();
+  }, [run, run.state.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const viewRecord = useCallback((r: RunRecord) => {
     setCurrentView(r);
@@ -165,7 +218,7 @@ export default function App() {
             onConfigChange={setConfig}
             runState={run.state}
             onStart={handleStart}
-            onCancel={run.cancel}
+            onCancel={handleCancel}
             onSelectTeam={setSelectedTeamId}
           />
         )}

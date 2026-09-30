@@ -190,11 +190,58 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
         break;
       case '-start': {
         const what = (parts[2] || '').replace(/^move:\s*/, '');
-        if (what) event(`${who(parts[1])}: ${what}!`);
+        if (!what) break;
+        if (what === 'confusion') {
+          event(`${who(parts[1])} became confused!`);
+          break;
+        }
+        const proto = /^(protosynthesis|quarkdrive)(atk|def|spa|spd|spe)?$/i.exec(what);
+        if (proto) {
+          const ability = proto[1].toLowerCase() === 'protosynthesis' ? 'Protosynthesis' : 'Quark Drive';
+          const stat = proto[2] ? STAT_NAMES[proto[2].toLowerCase()] : null;
+          event(stat
+            ? `${who(parts[1])}'s ${ability} boosted its ${stat}!`
+            : `${who(parts[1])}'s ${ability} activated!`);
+          break;
+        }
+        event(`${who(parts[1])}: ${what}!`);
         break;
       }
-      case '-end':
-        if (parts[2]) event(`${who(parts[1])}'s ${(parts[2] || '').replace(/^move:\s*/, '')} ended.`);
+      case '-end': {
+        const what = (parts[2] || '').replace(/^move:\s*/, '');
+        if (!what) break;
+        const pretty = what
+          .replace(/^protosynthesis/i, 'Protosynthesis')
+          .replace(/^quarkdrive/i, 'Quark Drive');
+        event(`${who(parts[1])}'s ${pretty} ended.`);
+        break;
+      }
+      case '-activate': {
+        const target = who(parts[1]);
+        const what = parts.slice(2).join(' ')
+          .replace(/\[fromitem\]/gi, '(from its item)')
+          .replace(/\[from\]/gi, 'from')
+          .trim();
+        if (/^confusion\b/i.test(what)) {
+          event(`${target} hurt itself in its confusion!`);
+        } else if (/^ability:\s*/i.test(what)) {
+          const ab = what.replace(/^ability:\s*/i, '').replace(/\s*\(from its item\)\s*/i, '').trim();
+          event(`${target}'s ${ab} activated!`);
+        } else if (/^move:\s*/i.test(what)) {
+          event(`${target} — ${what.replace(/^move:\s*/i, '')}!`);
+        } else if (what) {
+          event(`${target}: ${what}`);
+        }
+        break;
+      }
+      case '-immune':
+        event(`It doesn't affect ${who(parts[1])}…`);
+        break;
+      case '-fail':
+        event('But it failed!');
+        break;
+      case '-enditem':
+        event(`${who(parts[1])}'s ${parts[2] || 'item'} was used up!`);
         break;
       case '-heal':
       case '-damage':
@@ -205,8 +252,18 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
         info(parts.slice(1).join(' '));
         break;
       default: {
-        // Anything unrecognized: show a cleaned-up version rather than dropping it.
-        const cleaned = parts.join(' ').replace(/^\s+/, '');
+        // Anything unrecognized: resolve side slots to team names and strip
+        // protocol brackets rather than leaking raw syntax.
+        const cleaned = parts
+          .map((x, i) => {
+            if (i === 0) return x.replace(/^-/, '');
+            const t = x.trim();
+            return /^p[12]a?:/.test(t) ? who(x) : x;
+          })
+          .join(' ')
+          .replace(/\[fromitem\]/gi, '(from its item)')
+          .replace(/\[from\]/gi, 'from')
+          .replace(/^\s+/, '');
         if (cleaned) info(cleaned);
         break;
       }

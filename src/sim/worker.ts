@@ -37,7 +37,7 @@ type Out =
   | {type: 'provider'; provider: MetamonProvider}
   | {type: 'replay-log'; matchupIndex: number; winner: 'p1' | 'p2' | null; turns: number; log: string[]}
   | {type: 'replay-error'; matchupIndex: number; message: string}
-  | {type: 'progress'; matchupIndex: number; matchupName: string; battle: number; battlesPerMatchup: number; matchupsDone: number; matchupsTotal: number}
+  | {type: 'progress'; matchupIndex: number; matchupName: string; battle: number; battlesPerMatchup: number; matchupsDone: number; matchupsTotal: number; matchupWins: number; matchupLosses: number; matchupDraws: number}
   | {type: 'matchup'; index: number; result: MatchupResult}
   | {type: 'done'; results: MatchupResult[]}
   | {type: 'cancelled'}
@@ -138,6 +138,9 @@ w.onmessage = (e: MessageEvent) => {
             battlesPerMatchup: job.battlesPerMatchup,
             matchupsDone: mi,
             matchupsTotal: total,
+            matchupWins: wins,
+            matchupLosses: losses,
+            matchupDraws: draws,
           });
         }
         const result: MatchupResult = {

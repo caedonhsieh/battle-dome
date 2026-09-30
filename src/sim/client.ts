@@ -10,6 +10,10 @@ export interface ProgressMsg {
   battlesPerMatchup: number;
   matchupsDone: number;
   matchupsTotal: number;
+  /** Running W/L/D within the current matchup (after the just-finished battle). */
+  matchupWins: number;
+  matchupLosses: number;
+  matchupDraws: number;
 }
 
 export function createBenchmarkWorker(): Worker {

@@ -13,7 +13,8 @@ interface Props {
   onConfigChange: (c: RunConfig) => void;
   runState: RunState;
   onStart: () => void;
-  onCancel: () => void;
+  /** choice: keep the partial results as a run record, or discard them */
+  onCancel: (choice: 'keep' | 'discard') => void;
   onSelectTeam: (id: string | null) => void;
 }
 
@@ -90,8 +91,24 @@ export default function RunTab({
     return () => clearInterval(t);
   }, [running]);
 
-  const liveTotals = summarize(runState.results);
+  const base = summarize(runState.results);
+  // In-progress matchup tally, updated after every battle. Guarded so the
+  // final tally isn't double-counted once the matchup result lands in results.
+  const inProgressRow =
+    p && !mp && runState.results.length <= p.matchupIndex
+      ? {name: p.matchupName, wins: p.matchupWins, losses: p.matchupLosses, draws: p.matchupDraws}
+      : null;
+  const liveTotals = {
+    wins: base.wins + (inProgressRow?.wins ?? 0),
+    losses: base.losses + (inProgressRow?.losses ?? 0),
+    draws: base.draws + (inProgressRow?.draws ?? 0),
+  };
   const liveGrand = liveTotals.wins + liveTotals.losses + liveTotals.draws;
+  const inProgressBattles = inProgressRow
+    ? inProgressRow.wins + inProgressRow.losses + inProgressRow.draws
+    : 0;
+  const hasPartialResults = runState.results.length > 0 || inProgressBattles > 0;
+  const [cancelDialog, setCancelDialog] = useState(false);
   let etaText = '';
   if (running && runState.startedAt && doneBattles > 0 && totalBattles > doneBattles) {
     const elapsedSec = Math.max(1, (now - runState.startedAt) / 1000);
@@ -163,7 +180,7 @@ export default function RunTab({
             ▶ Start benchmark
           </button>
         ) : (
-          <button className="btn danger large" onClick={onCancel}>
+          <button className="btn danger large" onClick={() => setCancelDialog(true)}>
             ■ Cancel
           </button>
         )}
@@ -210,7 +227,7 @@ export default function RunTab({
               </p>
             </>
           )}
-          {running && p && !mp && runState.results.length > 0 && (
+          {running && p && !mp && (runState.results.length > 0 || inProgressRow) && (
             <div className="live-results">
               <p className="muted tiny">
                 Running total:{' '}
@@ -219,6 +236,18 @@ export default function RunTab({
                 {liveGrand > 0 && ` (${Math.round((liveTotals.wins / liveGrand) * 100)}%)`}
               </p>
               <ul className="mini-list">
+                {inProgressRow && (() => {
+                  const t = inProgressRow.wins + inProgressRow.losses + inProgressRow.draws;
+                  return (
+                    <li key="live" className="live-row">
+                      <span>{inProgressRow.name} <span className="badge live-badge">live</span></span>
+                      <span className="num">
+                        {inProgressRow.wins}W / {inProgressRow.losses}L / {inProgressRow.draws}D
+                        {t > 0 && ` (${Math.round((inProgressRow.wins / t) * 100)}%)`}
+                      </span>
+                    </li>
+                  );
+                })()}
                 {[...runState.results].reverse().map((r) => {
                   const t = r.wins + r.losses + r.draws;
                   return (
@@ -241,8 +270,53 @@ export default function RunTab({
         </div>
       )}
 
-      {runState.status === 'cancelled' && (
-        <div className="alert">Run cancelled. Partial results were discarded.</div>
+      {cancelDialog && running && (
+        <div className="modal-overlay" onClick={() => setCancelDialog(false)}>
+          <div className="modal narrow" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Cancel run?</h3>
+              <button className="btn small ghost" onClick={() => setCancelDialog(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p className="muted">
+                {hasPartialResults ? (
+                  <>So far: <strong className="win-t">{liveTotals.wins}W</strong> /{' '}
+                  <strong className="loss-t">{liveTotals.losses}L</strong> / {liveTotals.draws}D
+                  across {runState.results.length + (inProgressBattles > 0 ? 1 : 0)} matchup
+                  {runState.results.length + (inProgressBattles > 0 ? 1 : 0) === 1 ? '' : 's'}.</>
+                ) : (
+                  <>No battles have finished yet.</>
+                )}{' '}
+                Keep the results so far as a partial run, or discard them?
+              </p>
+              <div className="dialog-actions">
+                <button
+                  className="btn primary"
+                  disabled={!hasPartialResults}
+                  title={hasPartialResults ? 'Save the results so far to run history' : 'Nothing to keep yet'}
+                  onClick={() => {
+                    setCancelDialog(false);
+                    onCancel('keep');
+                  }}
+                >
+                  Keep results
+                </button>
+                <button
+                  className="btn danger"
+                  onClick={() => {
+                    setCancelDialog(false);
+                    onCancel('discard');
+                  }}
+                >
+                  Discard
+                </button>
+                <button className="btn ghost" onClick={() => setCancelDialog(false)}>
+                  Keep running
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

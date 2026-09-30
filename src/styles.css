@@ -407,3 +407,24 @@ a { color: var(--accent); }
   padding: 3px 0; border-bottom: 1px dashed var(--border);
 }
 .mini-list li:last-child { border-bottom: none; }
+
+/* Live in-progress matchup row */
+.live-row { font-weight: 600; }
+.badge.live-badge {
+  font-size: 0.6rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #1f5c2e;
+  border: 1px solid #2f7a40;
+  color: #d3f2da;
+  vertical-align: middle;
+}
+
+/* Cancel dialog */
+.modal.narrow { max-width: 420px; }
+.dialog-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.badge.partial-badge {
+  color: #fcd34d;
+  border: 1px solid #92690e;
+  background: rgba(146, 105, 14, 0.18);
+}

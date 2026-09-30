@@ -68,7 +68,9 @@ export function useBenchmarkRun() {
           cancelRef.current = null;
         },
         onCancelled: () => {
-          setState((s) => ({...s, status: 'cancelled', progress: null, modelProgress: null}));
+          // Keep progress: App may need the in-progress matchup tally to save
+          // partial results. RunTab only renders it while running.
+          setState((s) => ({...s, status: 'cancelled', modelProgress: null}));
           cancelRef.current = null;
         },
         onError: (message) => {

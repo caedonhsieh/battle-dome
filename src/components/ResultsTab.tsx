@@ -146,6 +146,7 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                   ? `Metamon${current.meta.provider ? ` · ${current.meta.provider === 'webgpu' ? 'WebGPU' : 'WASM'}` : ''}`
                   : 'Heuristic'}
               </span>{' '}
+              {current.meta.partial && <span className="badge partial-badge">Partial</span>}{' '}
               <span className="muted tiny">
                 · {current.meta.battlesPerMatchup} battles/matchup · seed “{current.meta.seed}” ·{' '}
                 {new Date(current.meta.date).toLocaleString()}
@@ -256,7 +257,10 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                     <button className="btn small ghost" onClick={() => setRenamingId(null)}>Cancel</button>
                   </span>
                 ) : (
-                  <strong>{h.name}</strong>
+                  <>
+                    <strong>{h.name}</strong>{' '}
+                    {h.meta.partial && <span className="badge partial-badge">Partial</span>}
+                  </>
                 )}
                 <div className="muted tiny">
                   {h.meta.teamName} · {new Date(h.date).toLocaleString()} ·{' '}
