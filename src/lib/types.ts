@@ -35,6 +35,8 @@ export interface RunMeta {
   seed: string;
   refCount: number;
   date: number;
+  /** Pilot that played both sides. Absent on runs from before engine tracking (heuristic). */
+  engine?: 'heuristic' | 'metamon-kadabra3';
 }
 
 export interface RunRecord {

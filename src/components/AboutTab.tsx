@@ -10,42 +10,35 @@ export default function AboutTab() {
           @pkmn/sim
         </a>
         ) running entirely in your browser — damage rolls, accuracy, speed ties, status, and
-        entry hazards are all genuinely simulated. What is <em>not</em> real is the player: both
-        sides are piloted by the same simple heuristic bot, described honestly below.
+        entry hazards are all genuinely simulated. The players are real too, in a sense: both
+        sides are piloted by the same trained neural-network policy, described honestly below.
       </p>
 
       <div className="card">
-        <h3>The bot</h3>
+        <h3>The pilot: Metamon Kadabra3</h3>
         <ul className="explainer">
           <li>
-            <strong>Move choice.</strong> Each turn it scores every usable damaging move as{' '}
-            <code>base power × type effectiveness × STAB (1.5) × accuracy</code>, plus ±5% random
-            jitter to break ties, and picks the highest. Disabled moves are skipped.
+            <strong>What it is.</strong> Kadabra3 is a 46M-parameter reinforcement-learning
+            policy trained on gen9 OU play (<a href="https://github.com/smogon/metamon" target="_blank" rel="noreferrer">Metamon</a>,
+            MIT licensed). It reads the battle the way a human does — revealed moves, HP,
+            boosts, hazards, Tera availability — and picks from 13 actions (4 moves, 5
+            switches, 4 Tera moves) every turn.
           </li>
           <li>
-            <strong>Recovery.</strong> If its active Pokémon is below 75% HP, it prefers a recovery
-            move (Recover, Roost, …) when it has one.
+            <strong>It plays like a player.</strong> It Terastallizes, switches voluntarily,
+            sets up, recovers, and plays around what it has seen — the old heuristic bot did
+            none of that. In a 100-battle head-to-head, Metamon beat that heuristic 90-9-1.
           </li>
           <li>
-            <strong>Setup.</strong> If unboosted and above 60% HP, it prefers a self-targeting
-            boosting move (Swords Dance, Dragon Dance, …) when it has one.
+            <strong>Deterministic.</strong> It always takes its highest-scoring legal action
+            (argmax, no sampling), so runs are fully reproducible: same teams + same seed +
+            same matchup order = same results. Change the seed to sample different RNG.
           </li>
           <li>
-            <strong>Hazards.</strong> It sets each entry hazard (Stealth Rock, Spikes, Toxic
-            Spikes, Sticky Web) once if the opposing side doesn't already have it.
-          </li>
-          <li>
-            <strong>Switching.</strong> It <em>only</em> switches when forced to (a faint). It
-            then picks the surviving bench Pokémon least vulnerable to the foe's STAB types,
-            weighted by remaining HP.
-          </li>
-          <li>
-            <strong>Never Terastallizes.</strong> Tera is a huge part of real gen9 play and this
-            bot simply doesn't use it — on either side.
-          </li>
-          <li>
-            <strong>No prediction.</strong> It doesn't anticipate switches, double-switch, or
-            play around likely sets. It reacts to the board state, nothing more.
+            <strong>Where it runs.</strong> The model (~95MB) downloads once from a public
+            release and is cached in your browser's IndexedDB. Inference runs on-device via{' '}
+            <code>onnxruntime-web</code> — WebGPU when available, WASM otherwise (roughly a
+            second per decision on WASM). Nothing about your teams leaves your browser.
           </li>
           <li>
             <strong>Draws.</strong> Battles are capped at 200 turns; anything undecided by then
@@ -58,14 +51,15 @@ export default function AboutTab() {
         <h3>What the numbers mean (and don't)</h3>
         <ul className="explainer">
           <li>
-            Because both sides use the identical bot, results measure <strong>relative team
-            strength under this heuristic</strong> — a team that wins 70% of simulated games is
-            better <em>at being piloted by this bot</em> than one that wins 30%.
+            Because both sides use the identical pilot, results measure <strong>relative team
+            strength under Metamon play</strong> — a team that wins 70% of simulated games is
+            better <em>at being piloted by this policy</em> than one that wins 30%.
           </li>
           <li>
-            These are <strong>not ladder predictions</strong>. A human would Tera, predict, and
-            switch voluntarily; the bot does none of that. Stall, in particular, tends to
-            overperform here because the bot never punishes passive play the way a human would.
+            These are <strong>not ladder predictions</strong>. Metamon plays at a strong
+            human-like level, but it is still one fixed policy with blind spots — it went
+            roughly even piloting stall, for example. Treat win rates as matchup signal, not
+            a rating.
           </li>
           <li>
             Use win rates to compare <strong>your own teams against each other</strong> or to

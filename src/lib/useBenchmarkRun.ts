@@ -1,11 +1,12 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {createBenchmarkWorker, startRun, type MatchupResult, type ProgressMsg, type RunJob} from '../sim/client';
+import {createBenchmarkWorker, startRun, type MatchupResult, type ModelProgressMsg, type ProgressMsg, type RunJob} from '../sim/client';
 
 export type RunStatus = 'idle' | 'running' | 'done' | 'error' | 'cancelled';
 
 export interface RunState {
   status: RunStatus;
   progress: ProgressMsg | null;
+  modelProgress: ModelProgressMsg | null;
   results: MatchupResult[];
   error: string | null;
 }
@@ -20,6 +21,7 @@ export function useBenchmarkRun() {
   const [state, setState] = useState<RunState>({
     status: 'idle',
     progress: null,
+    modelProgress: null,
     results: [],
     error: null,
   });
@@ -39,22 +41,24 @@ export function useBenchmarkRun() {
       stopWorker();
       const worker = createBenchmarkWorker();
       workerRef.current = worker;
-      setState({status: 'running', progress: null, results: [], error: null});
+      setState({status: 'running', progress: null, modelProgress: null, results: [], error: null});
       const cancel = startRun(worker, job, {
+        onModelProgress: (modelProgress) =>
+          setState((s) => ({...s, modelProgress})),
         onProgress: (progress) =>
-          setState((s) => ({...s, progress})),
+          setState((s) => ({...s, progress, modelProgress: null})),
         onMatchup: (_index, result) =>
           setState((s) => ({...s, results: [...s.results, result]})),
         onDone: (results) => {
-          setState((s) => ({...s, status: 'done', results, progress: null}));
+          setState((s) => ({...s, status: 'done', results, progress: null, modelProgress: null}));
           cancelRef.current = null;
         },
         onCancelled: () => {
-          setState((s) => ({...s, status: 'cancelled', progress: null}));
+          setState((s) => ({...s, status: 'cancelled', progress: null, modelProgress: null}));
           cancelRef.current = null;
         },
         onError: (message) => {
-          setState((s) => ({...s, status: 'error', error: message, progress: null}));
+          setState((s) => ({...s, status: 'error', error: message, progress: null, modelProgress: null}));
           cancelRef.current = null;
         },
       });
@@ -69,7 +73,7 @@ export function useBenchmarkRun() {
 
   const reset = useCallback(() => {
     stopWorker();
-    setState({status: 'idle', progress: null, results: [], error: null});
+    setState({status: 'idle', progress: null, modelProgress: null, results: [], error: null});
   }, [stopWorker]);
 
   return {state, start, cancel, reset, running: state.status === 'running'};

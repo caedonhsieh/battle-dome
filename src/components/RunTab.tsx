@@ -39,6 +39,7 @@ export function buildJob(
       seed,
       refCount: selectedRefs.length,
       date: Date.now(),
+      engine: 'metamon-kadabra3',
     },
   };
 }
@@ -63,6 +64,7 @@ export default function RunTab({
 }: Props) {
   const running = runState.status === 'running';
   const p = runState.progress;
+  const mp = runState.modelProgress;
   const totalBattles = selectedRefs.length * Math.max(1, Math.min(200, Math.floor(config.battlesPerMatchup) || 20));
   const doneBattles = p ? p.matchupsDone * p.battlesPerMatchup + p.battle : 0;
   const pct = totalBattles > 0 ? Math.min(100, (doneBattles / totalBattles) * 100) : 0;
@@ -149,7 +151,24 @@ export default function RunTab({
       {(running || runState.status === 'error') && (
         <div className="card">
           <h3>{running ? 'Running…' : 'Run failed'}</h3>
-          {running && p && (
+          <p className="muted tiny">
+            <span className="badge">Metamon Kadabra3</span> piloting both sides
+          </p>
+          {running && mp && (
+            <>
+              <div className="progress">
+                <div className="progress-bar" style={{width: `${Math.round(mp.fraction * 100)}%`}} />
+              </div>
+              <p className="muted">
+                {mp.stage === 'downloading'
+                  ? `Downloading model… ${Math.round(mp.fraction * 100)}% (95MB, one-time)`
+                  : mp.stage === 'cached'
+                    ? 'Model loaded from cache…'
+                    : 'Loading model…'}
+              </p>
+            </>
+          )}
+          {running && p && !mp && (
             <>
               <div className="progress">
                 <div className="progress-bar" style={{width: `${pct}%`}} />
@@ -160,7 +179,7 @@ export default function RunTab({
               </p>
             </>
           )}
-          {running && !p && <p className="muted">Starting worker…</p>}
+          {running && !p && !mp && <p className="muted">Starting worker…</p>}
           {runState.status === 'error' && (
             <div className="alert error">{runState.error}</div>
           )}

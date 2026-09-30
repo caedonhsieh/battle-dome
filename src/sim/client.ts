@@ -15,7 +15,13 @@ export function createBenchmarkWorker(): Worker {
   return new Worker(new URL('./worker.ts', import.meta.url), {type: 'module'});
 }
 
+export interface ModelProgressMsg {
+  fraction: number;
+  stage: 'cached' | 'downloading' | 'loading';
+}
+
 export interface RunCallbacks {
+  onModelProgress: (p: ModelProgressMsg) => void;
   onProgress: (p: ProgressMsg) => void;
   onMatchup: (index: number, result: MatchupResult) => void;
   onDone: (results: MatchupResult[]) => void;
@@ -28,6 +34,7 @@ export function startRun(worker: Worker, job: RunJob, cb: RunCallbacks): () => v
   worker.onmessage = (e: MessageEvent) => {
     const m = e.data as any;
     switch (m.type) {
+      case 'model-progress': cb.onModelProgress(m); break;
       case 'progress': cb.onProgress(m); break;
       case 'matchup': cb.onMatchup(m.index, m.result); break;
       case 'done': cb.onDone(m.results); break;
