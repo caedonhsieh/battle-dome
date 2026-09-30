@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {createBenchmarkWorker, startRun, type MatchupResult, type ModelProgressMsg, type ProgressMsg, type RunJob} from '../sim/client';
+import {createBenchmarkWorker, startRun, requestReplay, type MatchupResult, type ModelProgressMsg, type ProgressMsg, type ReplayRequest, type ReplayResult, type RunJob} from '../sim/client';
 import type {MetamonProvider} from '../sim/metamon/model';
 
 export type RunStatus = 'idle' | 'running' | 'done' | 'error' | 'cancelled';
@@ -77,10 +77,24 @@ export function useBenchmarkRun() {
     cancelRef.current?.();
   }, []);
 
+  /**
+   * Re-simulate battle 0 of a matchup and return its protocol log. Reuses the
+   * existing worker (model session stays cached) or spawns one. Must not be
+   * called while a run is active.
+   */
+  const replay = useCallback(async (req: ReplayRequest): Promise<ReplayResult> => {
+    let worker = workerRef.current;
+    if (!worker) {
+      worker = createBenchmarkWorker();
+      workerRef.current = worker;
+    }
+    return requestReplay(worker, req);
+  }, []);
+
   const reset = useCallback(() => {
     stopWorker();
     setState({status: 'idle', progress: null, modelProgress: null, provider: null, results: [], error: null});
   }, [stopWorker]);
 
-  return {state, start, cancel, reset, running: state.status === 'running'};
+  return {state, start, cancel, reset, replay, running: state.status === 'running'};
 }

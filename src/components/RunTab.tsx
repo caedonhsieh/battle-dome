@@ -40,6 +40,7 @@ export function buildJob(
       refCount: selectedRefs.length,
       date: Date.now(),
       engine: 'metamon-kadabra3',
+      userPaste: team.paste,
     },
   };
 }

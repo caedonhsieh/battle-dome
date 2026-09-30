@@ -35,6 +35,8 @@ export interface MatchupResult {
 type Out =
   | {type: 'model-progress'; fraction: number; stage: 'cached' | 'downloading' | 'loading'}
   | {type: 'provider'; provider: MetamonProvider}
+  | {type: 'replay-log'; matchupIndex: number; winner: 'p1' | 'p2' | null; turns: number; log: string[]}
+  | {type: 'replay-error'; matchupIndex: number; message: string}
   | {type: 'progress'; matchupIndex: number; matchupName: string; battle: number; battlesPerMatchup: number; matchupsDone: number; matchupsTotal: number}
   | {type: 'matchup'; index: number; result: MatchupResult}
   | {type: 'done'; results: MatchupResult[]}
@@ -50,10 +52,48 @@ const w = self as unknown as {
   postMessage: (m: Out) => void;
 };
 
+type Post = (m: Out) => void;
+
+/** Load the model session if needed. Posts model-progress on first load. */
+async function ensureSession(post: Post): Promise<ort.InferenceSession> {
+  let session = cachedSession;
+  if (!session) {
+    const loaded = await loadMetamonSession((fraction, stage) =>
+      post({type: 'model-progress', fraction, stage}),
+    );
+    session = loaded.session;
+    cachedSession = session;
+    cachedProvider = loaded.provider;
+  }
+  return session;
+}
+
 w.onmessage = (e: MessageEvent) => {
-  const msg = e.data as {type: string; job?: RunJob};
+  const msg = e.data as {type: string; job?: RunJob; userPaste?: string; refPaste?: string; seed?: string; matchupIndex?: number};
   if (msg.type === 'cancel') {
     cancelled = true;
+    return;
+  }
+  // On-demand replay: re-simulate battle 0 of a matchup (deterministic seed,
+  // so it is the exact same battle) and return its full protocol log.
+  if (msg.type === 'replay') {
+    const {userPaste = '', refPaste = '', seed = '', matchupIndex = 0} = msg;
+    const post = (m: Out) => w.postMessage(m);
+    void (async () => {
+      try {
+        const session = await ensureSession(post);
+        const runner: MetamonRunner = {ort, session};
+        const r = await runBattleMetamon(runner, userPaste, refPaste, {
+          seed,
+          matchupIndex,
+          battleIndex: 0,
+          captureLog: true,
+        }, () => false);
+        post({type: 'replay-log', matchupIndex, winner: r.winner, turns: r.turns, log: r.log ?? []});
+      } catch (err: any) {
+        post({type: 'replay-error', matchupIndex, message: String(err?.message || err)});
+      }
+    })();
     return;
   }
   if (msg.type !== 'run' || !msg.job) return;
@@ -63,19 +103,13 @@ w.onmessage = (e: MessageEvent) => {
 
   void (async () => {
     try {
-      if (!cachedSession) {
-        const loaded = await loadMetamonSession((fraction, stage) =>
-          post({type: 'model-progress', fraction, stage}),
-        );
-        cachedSession = loaded.session;
-        cachedProvider = loaded.provider;
-      }
+      const session = await ensureSession(post);
       post({type: 'provider', provider: cachedProvider!});
       if (cancelled) {
         post({type: 'cancelled'});
         return;
       }
-      const runner: MetamonRunner = {ort, session: cachedSession};
+      const runner: MetamonRunner = {ort, session};
       const isCancelled = () => cancelled;
 
       const results: MatchupResult[] = [];

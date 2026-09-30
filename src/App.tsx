@@ -176,6 +176,9 @@ export default function App() {
             onHistoryChange={setHistory}
             onViewRecord={viewRecord}
             getRefPaste={(id) => refPasteById.get(id)}
+            getUserPaste={(name) => teams.find((t) => t.name === name)?.paste}
+            requestReplay={run.replay}
+            runActive={run.running}
           />
         )}
         {tab === 'about' && <AboutTab />}

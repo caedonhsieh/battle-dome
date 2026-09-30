@@ -176,5 +176,9 @@ export async function runBattleMetamon(
     if (p1Alive && !p2Alive) winner = 'p1';
     else if (p2Alive && !p1Alive) winner = 'p2';
   }
-  return {winner, turns: battle.turn};
+  return {
+    winner,
+    turns: battle.turn,
+    log: opts.captureLog ? state.broadcast.slice() : undefined,
+  };
 }

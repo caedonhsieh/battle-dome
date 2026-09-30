@@ -12,12 +12,16 @@ const FORMAT = 'gen9ou';
 export interface BattleResult {
   winner: 'p1' | 'p2' | null; // null = draw (turn cap reached or mutual KO)
   turns: number;
+  /** Full public protocol log. Only populated when captureLog is requested. */
+  log?: string[];
 }
 
 export interface RunBattleOpts {
   seed: string;
   matchupIndex: number;
   battleIndex: number;
+  /** When true, the runner keeps the full public battle log in result.log. */
+  captureLog?: boolean;
 }
 
 const HAZARDS = ['stealthrock', 'spikes', 'toxicspikes', 'stickyweb'] as const;

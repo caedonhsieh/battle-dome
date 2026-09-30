@@ -107,8 +107,8 @@ export default function SpriteStrip({paste, size = 44}: Props) {
                 <img
                   src={s.spriteUrl}
                   alt={s.species}
-                  width={Math.round(size * 0.86)}
-                  height={Math.round(size * 0.86)}
+                  width={size}
+                  height={size}
                   loading="lazy"
                   draggable={false}
                   className={s.pixelated ? 'pixelated' : undefined}

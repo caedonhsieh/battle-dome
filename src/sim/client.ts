@@ -49,3 +49,41 @@ export function startRun(worker: Worker, job: RunJob, cb: RunCallbacks): () => v
   worker.postMessage({type: 'run', job});
   return () => worker.postMessage({type: 'cancel'});
 }
+
+export interface ReplayRequest {
+  userPaste: string;
+  refPaste: string;
+  seed: string;
+  matchupIndex: number;
+}
+
+export interface ReplayResult {
+  matchupIndex: number;
+  winner: 'p1' | 'p2' | null;
+  turns: number;
+  log: string[];
+}
+
+/**
+ * Re-simulate battle 0 of a matchup in the worker and resolve with its full
+ * protocol log. Battles are deterministic (seed + SplitMix32 + argmax), so
+ * this reproduces the exact battle from the original run. Coexists with a
+ * startRun-attached onmessage handler; do not call while a run is active.
+ */
+export function requestReplay(worker: Worker, req: ReplayRequest): Promise<ReplayResult> {
+  return new Promise((resolve, reject) => {
+    const onMsg = (e: MessageEvent) => {
+      const m = e.data as any;
+      if (m.matchupIndex !== req.matchupIndex) return;
+      if (m.type === 'replay-log') {
+        worker.removeEventListener('message', onMsg);
+        resolve(m as ReplayResult);
+      } else if (m.type === 'replay-error' || m.type === 'error') {
+        worker.removeEventListener('message', onMsg);
+        reject(new Error(String(m.message || 'Replay failed')));
+      }
+    };
+    worker.addEventListener('message', onMsg);
+    worker.postMessage({type: 'replay', ...req});
+  });
+}

@@ -39,6 +39,8 @@ export interface RunMeta {
   engine?: 'heuristic' | 'metamon-kadabra3';
   /** ONNX execution provider that ran the Metamon pilot. Absent before provider tracking. */
   provider?: 'webgpu' | 'wasm';
+  /** The user's team paste at run time (for replays). Absent on old runs. */
+  userPaste?: string;
 }
 
 export interface RunRecord {

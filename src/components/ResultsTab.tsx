@@ -1,8 +1,9 @@
 import {Fragment, useMemo, useState} from 'react';
-import type {MatchupResult} from '../sim/client';
+import type {MatchupResult, ReplayRequest, ReplayResult} from '../sim/client';
 import type {RunMeta, RunRecord} from '../lib/types';
 import {summarize} from './RunTab';
 import SpriteStrip from './SpriteStrip';
+import {formatReplayLog, type ReplayLine} from './replayFormat';
 
 interface ViewData {
   meta: RunMeta;
@@ -17,6 +18,12 @@ interface Props {
   onViewRecord: (r: RunRecord) => void;
   /** paste lookup for reference-team sprite strips (undefined = no strip) */
   getRefPaste: (refId: string) => string | undefined;
+  /** fallback lookup of the user's team paste by team name (for old runs) */
+  getUserPaste: (teamName: string) => string | undefined;
+  /** re-simulate battle 0 of a matchup; resolves with its protocol log */
+  requestReplay: (req: ReplayRequest) => Promise<ReplayResult>;
+  /** true while a benchmark run is active (replay shares the worker) */
+  runActive: boolean;
 }
 
 type SortKey = 'winrate' | 'name' | 'wins';
@@ -26,11 +33,54 @@ function winRate(r: MatchupResult): number {
   return total === 0 ? 0 : r.wins / total;
 }
 
-export default function ResultsTab({current, history, onHistoryChange, onViewRecord, getRefPaste}: Props) {
+export default function ResultsTab({current, history, onHistoryChange, onViewRecord, getRefPaste, getUserPaste, requestReplay, runActive}: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('winrate');
   const [sortDesc, setSortDesc] = useState(true);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [replayTitle, setReplayTitle] = useState<string | null>(null);
+  const [replayLines, setReplayLines] = useState<ReplayLine[] | null>(null);
+  const [replayLoading, setReplayLoading] = useState(false);
+  const [replayError, setReplayError] = useState<string | null>(null);
+
+  const closeReplay = () => {
+    setReplayTitle(null);
+    setReplayLines(null);
+    setReplayError(null);
+    setReplayLoading(false);
+  };
+
+  /** Re-simulate battle 0 of a matchup (deterministic: identical to the run's first battle). */
+  const openReplay = async (r: MatchupResult) => {
+    if (!current || runActive || replayLoading) return;
+    const matchupIndex = current.results.indexOf(r);
+    const userPaste = current.meta.userPaste ?? getUserPaste(current.meta.teamName);
+    const refPaste = getRefPaste(r.refId);
+    if (!userPaste || !refPaste || matchupIndex < 0) return;
+    setReplayTitle(`${current.meta.teamName} vs ${r.name} — battle 1 replay`);
+    setReplayLines(null);
+    setReplayError(null);
+    setReplayLoading(true);
+    try {
+      const res = await requestReplay({
+        userPaste,
+        refPaste,
+        seed: current.meta.seed,
+        matchupIndex,
+      });
+      setReplayLines(formatReplayLog(res.log, current.meta.teamName, r.name));
+    } catch (err: any) {
+      setReplayError(String(err?.message || err));
+    } finally {
+      setReplayLoading(false);
+    }
+  };
+
+  const canReplay = (r: MatchupResult) =>
+    !runActive &&
+    current?.meta.engine === 'metamon-kadabra3' &&
+    (current.meta.userPaste ?? getUserPaste(current.meta.teamName)) != null &&
+    getRefPaste(r.refId) != null;
 
   const sorted = useMemo(() => {
     if (!current) return [];
@@ -131,6 +181,7 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                       Win % {sortKey === 'winrate' ? (sortDesc ? '▼' : '▲') : ''}
                     </button>
                   </th>
+                  <th><span className="muted tiny">Replay</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -140,7 +191,7 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                   return (
                     <Fragment key={arch}>
                       <tr className="group-row">
-                        <td colSpan={6}>
+                        <td colSpan={7}>
                           {arch} — {sub.wins}W / {sub.losses}L / {sub.draws}D
                           {subTotal > 0 && ` (${Math.round((sub.wins / subTotal) * 100)}%)`}
                         </td>
@@ -159,6 +210,17 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                             <td className="num loss-t">{r.losses}</td>
                             <td className="num">{r.draws}</td>
                             <td className="num">{t ? Math.round((r.wins / t) * 100) : 0}%</td>
+                            <td className="num">
+                              {canReplay(r) && (
+                                <button
+                                  className="btn small ghost"
+                                  onClick={() => void openReplay(r)}
+                                  title="Re-simulate this matchup's first battle and show the log"
+                                >
+                                  ▶ Replay
+                                </button>
+                              )}
+                            </td>
                           </tr>
                         );
                       })}
@@ -225,6 +287,33 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
           );
         })}
       </div>
+
+      {replayTitle && (
+        <div className="modal-overlay" onClick={closeReplay}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>{replayTitle}</h3>
+              <button className="btn small ghost" onClick={closeReplay}>✕ Close</button>
+            </div>
+            <div className="modal-body">
+              {replayLoading && (
+                <div className="replay-loading">
+                  <p className="muted">Re-simulating the battle…</p>
+                </div>
+              )}
+              {replayError && <div className="alert error">{replayError}</div>}
+              {replayLines && replayLines.map((l, i) => (
+                <div key={i} className={
+                  l.kind === 'turn' ? 'replay-turn'
+                  : l.kind === 'result' ? 'replay-result'
+                  : l.kind === 'info' ? 'replay-info'
+                  : 'replay-event'
+                }>{l.text}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
