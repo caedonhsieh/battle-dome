@@ -322,44 +322,48 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
         </>
       )}
 
-      <h3>Run history ({history.length})</h3>
-      <p className="muted tiny">Saved in your browser. Rename, revisit, or delete past runs.</p>
-      {history.length === 0 && <p className="muted">No saved runs yet — completed runs are saved here automatically.</p>}
-      <div className="list">
-        {history.map((h) => {
+      <h3>Save Files ({history.length})</h3>
+      <p className="muted tiny">Saved in your browser. Load, rename, or delete past runs.</p>
+      <div className="save-files">
+        {history.length === 0 && (
+          <div className="save-slot empty">
+            <span className="save-file-no">— EMPTY SLOT —</span>
+            <span className="muted tiny">Completed runs save here automatically.</span>
+          </div>
+        )}
+        {history.map((h, i) => {
           const t = summarize(h.results);
           return (
-            <div key={h.id} className="card row">
-              <div className="grow">
-                {renamingId === h.id ? (
-                  <span className="inline-form">
-                    <input
-                      type="text"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      maxLength={80}
-                      autoFocus
-                    />
-                    <button className="btn small" onClick={() => handleRename(h.id)}>Save</button>
-                    <button className="btn small ghost" onClick={() => setRenamingId(null)}>Cancel</button>
-                  </span>
-                ) : (
-                  <>
-                    <strong>{h.name}</strong>{' '}
-                    {h.meta.partial && <span className="badge partial-badge">Partial</span>}
-                  </>
-                )}
-                <div className="muted tiny">
-                  {h.meta.teamName} · {new Date(h.date).toLocaleString()} ·{' '}
-                  <ScoreLine wins={t.wins} losses={t.losses} draws={t.draws} /> ·{' '}
-                  {h.meta.battlesPerMatchup}/matchup · seed “{h.meta.seed}” ·{' '}
-                  {h.meta.engine === METAMON_ENGINE
-                    ? `Metamon${h.meta.provider ? ` · ${h.meta.provider === 'webgpu' ? 'WebGPU' : 'WASM'}` : ''}`
-                    : 'heuristic'}
-                </div>
+            <div key={h.id} className="save-slot">
+              <div className="save-slot-head">
+                <span className="save-file-no">FILE {i + 1}</span>
+                {h.meta.partial && <span className="badge partial-badge">Partial</span>}
               </div>
-              <div className="actions">
-                <button className="btn small ghost" onClick={() => onViewRecord(h)}>View</button>
+              {renamingId === h.id ? (
+                <span className="inline-form">
+                  <input
+                    type="text"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    maxLength={80}
+                    autoFocus
+                  />
+                  <button className="btn small" onClick={() => handleRename(h.id)}>Save</button>
+                  <button className="btn small ghost" onClick={() => setRenamingId(null)}>Cancel</button>
+                </span>
+              ) : (
+                <div className="save-name">{h.name}</div>
+              )}
+              <div className="save-meta">
+                {h.meta.teamName} · {new Date(h.date).toLocaleString()} ·{' '}
+                <ScoreLine wins={t.wins} losses={t.losses} draws={t.draws} /> ·{' '}
+                {h.meta.battlesPerMatchup}/matchup · seed “{h.meta.seed}” ·{' '}
+                {h.meta.engine === METAMON_ENGINE
+                  ? `Metamon${h.meta.provider ? ` · ${h.meta.provider === 'webgpu' ? 'WebGPU' : 'WASM'}` : ''}`
+                  : 'heuristic'}
+              </div>
+              <div className="save-actions">
+                <button className="btn small primary" onClick={() => onViewRecord(h)}>▶ Load</button>
                 <button
                   className="btn small ghost"
                   onClick={() => {

@@ -3,7 +3,7 @@ import teamsData from '../data/reference-teams.json';
 import {validateTeamExport} from '../sim/bot';
 import type {BundledRef, CustomRef} from '../lib/types';
 import {uid, SMOGON_THREAD_URL, REFERENCE_SET_LABEL} from '../lib/types';
-import SpriteStrip from './SpriteStrip';
+import {parseSets, speciesInitials} from './SpriteStrip';
 
 const BUNDLED: BundledRef[] = (teamsData as any).teams;
 const ARCHETYPES = ['Offense', 'Bulky Offense', 'Balance', 'Stall'];
@@ -69,7 +69,7 @@ export default function RefsTab({selectedRefIds, onSelectionChange, customRefs, 
 
   return (
     <div className="panel">
-      <h2>Reference Teams</h2>
+      <h2>Foe Preview</h2>
       <p className="muted">
         Bundled reference set: <strong>{REFERENCE_SET_LABEL}</strong> — 21 sample teams by Smogon
         players.{' '}
@@ -98,23 +98,43 @@ export default function RefsTab({selectedRefIds, onSelectionChange, customRefs, 
         </button>
       </div>
 
-      <div className="list">
-        {visible.map((t) => (
-          <label key={t.id} className={`card row checkable ${selectedRefIds.includes(t.id) ? 'selected' : ''}`}>
-            <input type="checkbox" checked={selectedRefIds.includes(t.id)} onChange={() => toggle(t.id)} />
-            <div className="grow">
-              <strong>{t.name}</strong>{' '}
-              <span className={`badge arch-${t.archetype.replace(/\s/g, '')}`}>{t.archetype}</span>
-              <SpriteStrip paste={t.paste} size={40} />
-              <div className="muted tiny">
+      <div className="preview-list">
+        {visible.map((t) => {
+          const sets = parseSets(t.paste).slice(0, 6);
+          const sel = selectedRefIds.includes(t.id);
+          return (
+            <label key={t.id} className={`preview-card ${sel ? 'selected' : ''}`}>
+              <input
+                type="checkbox"
+                className="preview-check"
+                checked={sel}
+                onChange={() => toggle(t.id)}
+              />
+              <div className="preview-banner">
+                <span className="preview-cursor" aria-hidden="true">{sel ? '▶' : '▷'}</span>
+                <span className="preview-foe-name">{t.name}</span>
+                <span className={`badge arch-${t.archetype.replace(/\s/g, '')}`}>{t.archetype}</span>
+              </div>
+              <div className="preview-row" aria-hidden="true">
+                {sets.map((s, i) => (
+                  <span key={i} className="preview-slot" title={s.species}>
+                    {s.iconCss ? (
+                      <span className="mini-icon" style={s.iconCss} />
+                    ) : (
+                      <span className="sprite-fallback">{speciesInitials(s.species)}</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+              <div className="muted tiny preview-sub">
                 by {t.author} ·{' '}
                 <a href={t.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
                   pokepaste
                 </a>
               </div>
-            </div>
-          </label>
-        ))}
+            </label>
+          );
+        })}
       </div>
 
       <h3>Custom reference teams ({customRefs.length})</h3>
@@ -147,23 +167,50 @@ export default function RefsTab({selectedRefIds, onSelectionChange, customRefs, 
           Validate &amp; add reference
         </button>
       </div>
-      <div className="list">
-        {customRefs.map((r) => (
-          <div key={r.id} className={`card row ${selectedRefIds.includes(r.id) ? 'selected' : ''}`}>
-            <input type="checkbox" checked={selectedRefIds.includes(r.id)} onChange={() => toggle(r.id)} />
-            <div className="grow">
-              <strong>{r.name}</strong>{' '}
-              <span className={`badge arch-${r.archetype.replace(/\s/g, '')}`}>{r.archetype}</span>
-              <span className="badge">custom</span>
-              <SpriteStrip paste={r.paste} size={40} />
-            </div>
-            <div className="actions">
-              <button className="btn small danger" onClick={() => handleDeleteCustom(r.id)}>
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
+      <div className="preview-list">
+        {customRefs.map((r) => {
+          const sets = parseSets(r.paste).slice(0, 6);
+          const sel = selectedRefIds.includes(r.id);
+          return (
+            <label key={r.id} className={`preview-card ${sel ? 'selected' : ''}`}>
+              <input
+                type="checkbox"
+                className="preview-check"
+                checked={sel}
+                onChange={() => toggle(r.id)}
+              />
+              <div className="preview-banner">
+                <span className="preview-cursor" aria-hidden="true">{sel ? '▶' : '▷'}</span>
+                <span className="preview-foe-name">{r.name}</span>
+                <span className={`badge arch-${r.archetype.replace(/\s/g, '')}`}>{r.archetype}</span>
+                <span className="badge">custom</span>
+                <span className="spacer" />
+                <button
+                  type="button"
+                  className="btn small danger"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDeleteCustom(r.id);
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+              <div className="preview-row" aria-hidden="true">
+                {sets.map((s, i) => (
+                  <span key={i} className="preview-slot" title={s.species}>
+                    {s.iconCss ? (
+                      <span className="mini-icon" style={s.iconCss} />
+                    ) : (
+                      <span className="sprite-fallback">{speciesInitials(s.species)}</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </label>
+          );
+        })}
       </div>
     </div>
   );

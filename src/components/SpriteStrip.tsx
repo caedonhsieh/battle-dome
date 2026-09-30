@@ -60,7 +60,7 @@ export function parseSets(paste: string): SetSummary[] {
   });
 }
 
-function initials(species: string): string {
+export function speciesInitials(species: string): string {
   const parts = species.split(/[^A-Za-z0-9]+/).filter(Boolean);
   return (parts.map((w) => w[0]).join('').slice(0, 3) || '?').toUpperCase();
 }
@@ -101,7 +101,7 @@ export default function SpriteStrip({paste, size = 40}: Props) {
               {s.iconCss ? (
                 <span className="mini-icon" style={s.iconCss} aria-hidden="true" />
               ) : (
-                <span className="sprite-fallback">{initials(s.species)}</span>
+                <span className="sprite-fallback">{speciesInitials(s.species)}</span>
               )}
             </button>
             {open === i && (

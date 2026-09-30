@@ -658,3 +658,122 @@ a { color: var(--blue-deep); }
   .tab { font-size: 1.15rem; padding: 8px 10px 10px; }
   .modal-head { flex-wrap: wrap; }
 }
+
+/* ============================================================
+   PARTY tab — in-game party screen look
+   ============================================================ */
+.party-list { display: flex; flex-direction: column; gap: 14px; }
+.party-screen {
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.025) 0 8px, transparent 8px 16px),
+    linear-gradient(180deg, #177a6b 0%, #0e544b 55%, #08332f 100%);
+  border: 3px solid #eef4ee;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 2px #10201d, 0 3px 0 rgba(0,0,0,.45);
+  padding: 10px 12px 8px;
+  color: #fff;
+}
+.party-screen.active {
+  border-color: #ffd94d;
+  box-shadow: inset 0 0 0 2px #10201d, 0 0 14px rgba(255,217,77,.45);
+}
+.party-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.party-select {
+  background: none; border: none; padding: 4px 6px; cursor: pointer;
+  display: flex; align-items: center; gap: 10px; color: #fff;
+}
+.party-cursor { color: #ff6b6b; font-size: 18px; }
+.party-screen.active .party-cursor { animation: dome-blink 1.1s steps(2, start) infinite; }
+@keyframes dome-blink { 50% { opacity: 0; } }
+.party-title { font-family: var(--font-title); font-size: 15px; color: #fff; letter-spacing: .5px; }
+.party-mons { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.party-mon {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(0,0,0,.30);
+  border: 2px solid rgba(255,255,255,.35);
+  border-radius: 9px;
+  padding: 5px 10px;
+}
+.party-mon-info { display: flex; flex-direction: column; line-height: 1.05; min-width: 0; }
+.party-mon-name { font-size: 22px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.party-mon-item { font-size: 15px; color: #bfe6d8; }
+.party-foot { margin-top: 6px; }
+.party-screen .muted { color: #a9d8c9; }
+.party-screen .btn.ghost { color: #fff; border-color: rgba(255,255,255,.55); }
+.party-screen .btn.ghost:hover { background: rgba(255,255,255,.12); }
+.party-screen .inline-form input { background: #fff; }
+
+/* ============================================================
+   FOES tab — pre-battle team preview look
+   ============================================================ */
+.preview-list { display: flex; flex-direction: column; gap: 14px; }
+.preview-card {
+  display: block; cursor: pointer; position: relative;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 110%, rgba(90,140,255,.18), transparent 70%),
+    linear-gradient(180deg, #26264a 0%, #16162e 60%, #0c0c1d 100%);
+  border: 3px solid #eef4ee;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 2px #0a0a14, 0 3px 0 rgba(0,0,0,.45);
+  padding: 10px 14px;
+  color: #fff;
+}
+.preview-card.selected {
+  border-color: #ffd94d;
+  box-shadow: inset 0 0 0 2px #0a0a14, 0 0 14px rgba(255,217,77,.5);
+}
+.preview-card:focus-within { outline: 2px dashed #ffd94d; outline-offset: 3px; }
+.preview-check { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.preview-banner { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.preview-cursor { color: #ff6b6b; font-size: 18px; }
+.preview-card.selected .preview-cursor { animation: dome-blink 1.1s steps(2, start) infinite; }
+.preview-foe-name { font-family: var(--font-title); font-size: 14px; color: #fff; letter-spacing: .5px; }
+.preview-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.preview-slot {
+  width: 58px; height: 46px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.07);
+  border: 2px solid rgba(255,255,255,.30);
+  border-radius: 7px;
+}
+.preview-sub { margin-top: 8px; }
+.preview-sub a { color: #9fc2ff; }
+.preview-card .muted { color: #b9b9d6; }
+.preview-card .btn.danger { border-color: #ff8a8a; }
+
+/* ============================================================
+   FILES tab — game save-files screen look
+   ============================================================ */
+.save-files {
+  display: flex; flex-direction: column; gap: 10px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.02) 0 8px, transparent 8px 16px),
+    linear-gradient(180deg, #31468f 0%, #22305f 60%, #16204a 100%);
+  border: 3px solid #eef4ee;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 2px #0c1230, 0 3px 0 rgba(0,0,0,.45);
+  padding: 12px;
+}
+.save-slot {
+  background: rgba(0,0,0,.32);
+  border: 2px solid rgba(255,255,255,.65);
+  border-radius: 9px;
+  padding: 10px 12px;
+  color: #fff;
+}
+.save-slot.empty {
+  border-style: dashed;
+  border-color: rgba(255,255,255,.35);
+  text-align: center;
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+  padding: 18px 12px;
+}
+.save-slot-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.save-file-no { font-family: var(--font-title); font-size: 13px; color: #ffd94d; letter-spacing: 1px; }
+.save-name { font-family: var(--font-title); font-size: 15px; color: #fff; margin-bottom: 4px; }
+.save-meta { font-size: 17px; color: #ccd6f8; }
+.save-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.save-slot .muted { color: #9fb0e8; }
+.save-slot .btn.ghost { color: #fff; border-color: rgba(255,255,255,.55); }
+.save-slot .btn.ghost:hover { background: rgba(255,255,255,.12); }
+.save-slot .inline-form input { background: #fff; }

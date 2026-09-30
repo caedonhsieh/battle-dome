@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {validateTeamExport} from '../sim/bot';
 import type {SavedTeam} from '../lib/types';
 import {uid} from '../lib/types';
-import SpriteStrip from './SpriteStrip';
+import SpriteStrip, {parseSets, speciesInitials} from './SpriteStrip';
 
 interface Props {
   teams: SavedTeam[];
@@ -49,7 +49,7 @@ export default function TeamsTab({teams, onChange, selectedTeamId, onSelect}: Pr
 
   return (
     <div className="panel">
-      <h2>My Teams</h2>
+      <h2>Your Party</h2>
       <p className="muted">
         Paste a Pokémon Showdown team export. Teams are validated for the gen9 OU format and
         stored in your browser (localStorage) — nothing is uploaded.
@@ -89,56 +89,75 @@ export default function TeamsTab({teams, onChange, selectedTeamId, onSelect}: Pr
         </button>
       </div>
 
-      <h3>Saved teams ({teams.length})</h3>
-      {teams.length === 0 && <p className="muted">No teams yet — import one above.</p>}
-      <div className="list">
-        {teams.map((t) => (
-          <div key={t.id} className={`card row ${selectedTeamId === t.id ? 'selected' : ''}`}>
-            <label className="radio-label">
-              <input
-                type="radio"
-                name="active-team"
-                checked={selectedTeamId === t.id}
-                onChange={() => onSelect(t.id)}
-              />
-            </label>
-            <div className="grow">
-              {renamingId === t.id ? (
-                <span className="inline-form">
-                  <input
-                    type="text"
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    maxLength={60}
-                    autoFocus
-                  />
-                  <button className="btn small" onClick={() => handleRename(t.id)}>Save</button>
-                  <button className="btn small ghost" onClick={() => setRenamingId(null)}>Cancel</button>
-                </span>
-              ) : (
-                <strong>{t.name}</strong>
-              )}
-              <SpriteStrip paste={t.paste} size={40} />
-              <div className="muted tiny">
+      <h3>Saved parties ({teams.length})</h3>
+      {teams.length === 0 && <p className="muted">No party yet — import one above.</p>}
+      <div className="party-list">
+        {teams.map((t) => {
+          const sets = parseSets(t.paste).slice(0, 6);
+          const active = selectedTeamId === t.id;
+          return (
+            <div key={t.id} className={`party-screen ${active ? 'active' : ''}`}>
+              <div className="party-head">
+                {renamingId === t.id ? (
+                  <span className="inline-form">
+                    <input
+                      type="text"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      maxLength={60}
+                      autoFocus
+                    />
+                    <button className="btn small" onClick={() => handleRename(t.id)}>Save</button>
+                    <button className="btn small ghost" onClick={() => setRenamingId(null)}>Cancel</button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="party-select"
+                    onClick={() => onSelect(t.id)}
+                    aria-pressed={active}
+                    title="Choose this party for the next run"
+                  >
+                    <span className="party-cursor" aria-hidden="true">{active ? '▶' : '▷'}</span>
+                    <span className="party-title">{t.name}</span>
+                  </button>
+                )}
+                <div className="actions">
+                  <button
+                    className="btn small ghost"
+                    onClick={() => {
+                      setRenamingId(t.id);
+                      setRenameValue(t.name);
+                    }}
+                  >
+                    Rename
+                  </button>
+                  <button className="btn small danger" onClick={() => handleDelete(t.id)}>
+                    Release
+                  </button>
+                </div>
+              </div>
+              <div className="party-mons">
+                {sets.map((s, i) => (
+                  <div key={i} className="party-mon">
+                    {s.iconCss ? (
+                      <span className="mini-icon" style={s.iconCss} aria-hidden="true" />
+                    ) : (
+                      <span className="sprite-fallback">{speciesInitials(s.species)}</span>
+                    )}
+                    <span className="party-mon-info">
+                      <span className="party-mon-name">{s.species}</span>
+                      {s.item && <span className="party-mon-item">@ {s.item}</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="muted tiny party-foot">
                 Saved {new Date(t.createdAt).toLocaleDateString()}
               </div>
             </div>
-            <div className="actions">
-              <button
-                className="btn small ghost"
-                onClick={() => {
-                  setRenamingId(t.id);
-                  setRenameValue(t.name);
-                }}
-              >
-                Rename
-              </button>
-              <button className="btn small danger" onClick={() => handleDelete(t.id)}>
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
