@@ -1,8 +1,10 @@
 import {Fragment, useMemo, useState} from 'react';
 import type {MatchupResult, ReplayRequest, ReplayResult} from '../sim/client';
 import type {RunMeta, RunRecord} from '../lib/types';
-import {summarize} from './RunTab';
+import {METAMON_ENGINE, summarize, winRate} from '../lib/run';
+import {downloadText, slugify} from '../lib/download';
 import SpriteStrip from './SpriteStrip';
+import ScoreLine from './ScoreLine';
 import {formatReplayLog, type ReplayLine} from './replayFormat';
 import {buildReplayHtml} from './replayHtml';
 
@@ -21,18 +23,13 @@ interface Props {
   getRefPaste: (refId: string) => string | undefined;
   /** fallback lookup of the user's team paste by team name (for old runs) */
   getUserPaste: (teamName: string) => string | undefined;
-  /** re-simulate battle 0 of a matchup; resolves with its protocol log */
+  /** re-simulate one battle of a matchup; resolves with its protocol log */
   requestReplay: (req: ReplayRequest) => Promise<ReplayResult>;
   /** true while a benchmark run is active (replay shares the worker) */
   runActive: boolean;
 }
 
 type SortKey = 'winrate' | 'name' | 'wins';
-
-function winRate(r: MatchupResult): number {
-  const total = r.wins + r.losses + r.draws;
-  return total === 0 ? 0 : r.wins / total;
-}
 
 export default function ResultsTab({current, history, onHistoryChange, onViewRecord, getRefPaste, getUserPaste, requestReplay, runActive}: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('winrate');
@@ -52,8 +49,10 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
     setReplayTitle(null);
     setReplayMatchup(null);
     setReplayLines(null);
+    setReplayRawLog(null);
     setReplayError(null);
     setReplayLoading(false);
+    setReplayCopied(false);
   };
 
   /**
@@ -110,36 +109,20 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
   /** Download the raw standard-format battle log as a .log file. */
   const downloadReplayLog = () => {
     if (!replayRawLog || !replayTitle) return;
-    const blob = new Blob([replayRawLog.join('\n') + '\n'], {type: 'text/plain'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const slug = replayTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    a.href = url;
-    a.download = `battle-dome-${slug || 'replay'}.log`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    const slug = slugify(replayTitle);
+    downloadText(replayRawLog.join('\n') + '\n', `battle-dome-${slug || 'replay'}.log`, 'text/plain');
   };
 
   const downloadReplayHtml = () => {
     if (!replayRawLog || !replayTitle || !replayMatchup || !current) return;
     const html = buildReplayHtml(replayRawLog, current.meta.teamName, replayMatchup.name);
-    const blob = new Blob([html], {type: 'text/html'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const slug = replayTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    a.href = url;
-    a.download = `battle-dome-${slug || 'replay'}.html`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    const slug = slugify(replayTitle);
+    downloadText(html, `battle-dome-${slug || 'replay'}.html`, 'text/html');
   };
 
   const canReplay = (r: MatchupResult) =>
     !runActive &&
-    current?.meta.engine === 'metamon-kadabra3' &&
+    current?.meta.engine === METAMON_ENGINE &&
     (current.meta.userPaste ?? getUserPaste(current.meta.teamName)) != null &&
     getRefPaste(r.refId) != null;
 
@@ -203,7 +186,7 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
             <h3>
               {current.meta.teamName}{' '}
               <span className="badge">
-                {current.meta.engine === 'metamon-kadabra3'
+                {current.meta.engine === METAMON_ENGINE
                   ? `Metamon${current.meta.provider ? ` · ${current.meta.provider === 'webgpu' ? 'WebGPU' : 'WASM'}` : ''}`
                   : 'Heuristic'}
               </span>{' '}
@@ -249,13 +232,11 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
               <tbody>
                 {byArchetype.map(([arch, rows]) => {
                   const sub = summarize(rows);
-                  const subTotal = sub.wins + sub.losses + sub.draws;
                   return (
                     <Fragment key={arch}>
                       <tr className="group-row">
                         <td colSpan={7}>
-                          {arch} — {sub.wins}W / {sub.losses}L / {sub.draws}D
-                          {subTotal > 0 && ` (${Math.round((sub.wins / subTotal) * 100)}%)`}
+                          {arch} — <ScoreLine wins={sub.wins} losses={sub.losses} draws={sub.draws} />
                         </td>
                       </tr>
                       {rows.map((r) => {
@@ -346,7 +327,6 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
       <div className="list">
         {history.map((h) => {
           const t = summarize(h.results);
-          const total = t.wins + t.losses + t.draws;
           return (
             <div key={h.id} className="card row">
               <div className="grow">
@@ -370,10 +350,9 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                 )}
                 <div className="muted tiny">
                   {h.meta.teamName} · {new Date(h.date).toLocaleString()} ·{' '}
-                  {t.wins}W / {t.losses}L / {t.draws}D
-                  {total > 0 && ` (${Math.round((t.wins / total) * 100)}%)`} ·{' '}
+                  <ScoreLine wins={t.wins} losses={t.losses} draws={t.draws} /> ·{' '}
                   {h.meta.battlesPerMatchup}/matchup · seed “{h.meta.seed}” ·{' '}
-                  {h.meta.engine === 'metamon-kadabra3'
+                  {h.meta.engine === METAMON_ENGINE
                     ? `Metamon${h.meta.provider ? ` · ${h.meta.provider === 'webgpu' ? 'WebGPU' : 'WASM'}` : ''}`
                     : 'heuristic'}
                 </div>

@@ -77,8 +77,23 @@ async function ensureSession(post: Post): Promise<ort.InferenceSession> {
   return session;
 }
 
+/** Messages the worker accepts — the inbound mirror of the `Out` union. */
+type In =
+  | {type: 'cancel'}
+  | {type: 'run'; job: RunJob}
+  | {
+      type: 'replay';
+      userPaste?: string;
+      refPaste?: string;
+      seed?: string;
+      matchupIndex?: number;
+      battleIndex?: number;
+      p1Name?: string;
+      p2Name?: string;
+    };
+
 w.onmessage = (e: MessageEvent) => {
-  const msg = e.data as {type: string; job?: RunJob; userPaste?: string; refPaste?: string; seed?: string; matchupIndex?: number; battleIndex?: number; p1Name?: string; p2Name?: string};
+  const msg = e.data as In;
   if (msg.type === 'cancel') {
     cancelled = true;
     return;

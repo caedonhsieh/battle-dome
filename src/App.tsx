@@ -3,11 +3,12 @@ import teamsData from './data/reference-teams.json';
 import {store} from './lib/storage';
 import {useBenchmarkRun} from './lib/useBenchmarkRun';
 import type {BundledRef, CustomRef, RunConfig, RunMeta, RunRecord, SavedTeam} from './lib/types';
-import {uid, FORMAT_LABEL} from './lib/types';
+import {FORMAT_LABEL} from './lib/types';
+import {buildJob, buildRunRecord} from './lib/run';
 import type {RefTeam} from './sim/client';
 import TeamsTab from './components/TeamsTab';
 import RefsTab from './components/RefsTab';
-import RunTab, {buildJob} from './components/RunTab';
+import RunTab from './components/RunTab';
 import ResultsTab from './components/ResultsTab';
 import AboutTab from './components/AboutTab';
 
@@ -90,16 +91,12 @@ export default function App() {
   useEffect(() => {
     if (run.state.status === 'done' && metaRef.current && !savedRunRef.current) {
       savedRunRef.current = true;
-      const meta = metaRef.current;
-      if (run.state.provider) meta.provider = run.state.provider;
-      const record: RunRecord = {
-        id: uid(),
-        name: `${meta.teamName} — ${new Date(meta.date).toLocaleDateString()} ${new Date(meta.date).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`,
-        date: meta.date,
-        meta,
-        refs: refsRef.current.map((r) => ({id: r.id, name: r.name, archetype: r.archetype})),
+      const record = buildRunRecord({
+        meta: metaRef.current,
+        refs: refsRef.current,
         results: run.state.results,
-      };
+        provider: run.state.provider,
+      });
       setHistory((h) => [record, ...h]);
       setCurrentView(record);
       setTab('results');
@@ -123,8 +120,6 @@ export default function App() {
     cancelChoiceRef.current = null;
     if (choice === 'keep' && metaRef.current) {
       savedRunRef.current = true;
-      const meta: RunMeta = {...metaRef.current, partial: true};
-      if (run.state.provider) meta.provider = run.state.provider;
       const results = [...run.state.results];
       const p = run.state.progress;
       if (p && p.matchupWins + p.matchupLosses + p.matchupDraws > 0) {
@@ -140,14 +135,13 @@ export default function App() {
           });
         }
       }
-      const record: RunRecord = {
-        id: uid(),
-        name: `${meta.teamName} — ${new Date(meta.date).toLocaleDateString()} ${new Date(meta.date).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} (partial)`,
-        date: meta.date,
-        meta,
-        refs: refsRef.current.map((r) => ({id: r.id, name: r.name, archetype: r.archetype})),
+      const record = buildRunRecord({
+        meta: metaRef.current,
+        refs: refsRef.current,
         results,
-      };
+        provider: run.state.provider,
+        partial: true,
+      });
       setHistory((h) => [record, ...h]);
       setCurrentView(record);
       setTab('results');

@@ -1,8 +1,10 @@
 /**
  * Shared battle simulation + heuristic bot.
  *
- * Used by BOTH the Web Worker (browser) and the Node smoke test (scripts/smoke.ts),
- * so this module must stay free of browser-only APIs.
+ * The heuristic `runBattle` is now only used by the Node scripts
+ * (scripts/smoke.ts, scripts/dbg.ts); the browser worker pilots both sides
+ * with the Metamon model (src/sim/metamon/runner.ts). This module must stay
+ * free of browser-only APIs so the scripts can import it.
  */
 import {Battle, Teams, Dex, TeamValidator} from '@pkmn/sim';
 

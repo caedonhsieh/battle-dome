@@ -88,7 +88,7 @@ export function useBenchmarkRun() {
   }, []);
 
   /**
-   * Re-simulate battle 0 of a matchup and return its protocol log. Reuses the
+   * Re-simulate one battle of a matchup and return its protocol log. Reuses the
    * existing worker (model session stays cached) or spawns one. Must not be
    * called while a run is active.
    */
