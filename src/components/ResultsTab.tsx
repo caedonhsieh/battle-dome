@@ -46,6 +46,7 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
   const [replayLoading, setReplayLoading] = useState(false);
   const [replayError, setReplayError] = useState<string | null>(null);
   const [replayCopied, setReplayCopied] = useState(false);
+  const [expandedRefId, setExpandedRefId] = useState<string | null>(null);
 
   const closeReplay = () => {
     setReplayTitle(null);
@@ -232,7 +233,7 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                       Win % {sortKey === 'winrate' ? (sortDesc ? '▼' : '▲') : ''}
                     </button>
                   </th>
-                  <th><span className="muted tiny">Replay</span></th>
+                  <th><span className="muted tiny">Details</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -250,8 +251,11 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                       {rows.map((r) => {
                         const t = r.wins + r.losses + r.draws;
                         const paste = getRefPaste(r.refId);
+                        const hasBattleScores = canReplay(r) && (r.battles?.length ?? 0) > 0;
+                        const expanded = expandedRefId === r.refId;
                         return (
-                          <tr key={r.refId}>
+                          <Fragment key={r.refId}>
+                          <tr>
                             <td>
                               {r.name}
                               {paste && <SpriteStrip paste={paste} size={32} />}
@@ -262,7 +266,15 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                             <td className="num">{r.draws}</td>
                             <td className="num">{t ? Math.round((r.wins / t) * 100) : 0}%</td>
                             <td className="num">
-                              {canReplay(r) && (
+                              {hasBattleScores ? (
+                                <button
+                                  className="btn small ghost"
+                                  onClick={() => setExpandedRefId(expanded ? null : r.refId)}
+                                  title="Expand to see each battle's score"
+                                >
+                                  {expanded ? '▾ Details' : '▸ Details'}
+                                </button>
+                              ) : canReplay(r) ? (
                                 <button
                                   className="btn small ghost"
                                   onClick={() => void openReplay(r)}
@@ -270,9 +282,43 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                                 >
                                   ▶ Replay
                                 </button>
-                              )}
+                              ) : null}
                             </td>
                           </tr>
+                          {expanded && r.battles && (
+                            <tr className="battle-detail-row">
+                              <td colSpan={7}>
+                                <div className="battle-detail-list">
+                                  <div className="muted tiny battle-detail-note">
+                                    Remaining mons shown as your team – theirs.
+                                  </div>
+                                  {r.battles.map((b, i) => {
+                                    const outcome =
+                                      b.winner === 'p1' ? {cls: 'win-t', label: 'W', name: current.meta.teamName}
+                                      : b.winner === 'p2' ? {cls: 'loss-t', label: 'L', name: r.name}
+                                      : {cls: '', label: 'D', name: 'Draw'};
+                                    return (
+                                      <div key={i} className="battle-detail">
+                                        <span className="muted tiny battle-num">#{i + 1}</span>
+                                        <span className={`badge ${outcome.cls}`}>{outcome.label}</span>
+                                        <span className="battle-winner">{outcome.name}</span>
+                                        <span className="muted tiny">{b.turns} turns</span>
+                                        <span className="muted tiny">{b.p1Left}–{b.p2Left} left</span>
+                                        <button
+                                          className="btn small ghost"
+                                          onClick={() => void runReplay(r, i)}
+                                          title={`Generate the battle log for battle #${i + 1}`}
+                                        >
+                                          ≣ Log
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          </Fragment>
                         );
                       })}
                     </Fragment>

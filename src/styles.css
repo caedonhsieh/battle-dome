@@ -429,3 +429,40 @@ a { color: var(--accent); }
   border: 1px solid #92690e;
   background: rgba(146, 105, 14, 0.18);
 }
+
+/* Per-battle detail expansion under a matchup row */
+.battle-detail-row td {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 4px 12px 10px 32px;
+}
+.battle-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 560px;
+}
+.battle-detail-note {
+  margin-bottom: 2px;
+}
+.battle-detail {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.battle-detail .battle-num {
+  min-width: 28px;
+}
+.battle-detail .badge {
+  min-width: 22px;
+  text-align: center;
+}
+.battle-detail .battle-winner {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

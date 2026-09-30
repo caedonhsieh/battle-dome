@@ -177,8 +177,10 @@ export async function runBattleMetamon(
   }
 
   // Decide the winner from remaining HP (robust to mutual KOs), not battle.winner.
-  const p1Alive = battle.sides[0].pokemon.some((m: any) => m.hp > 0);
-  const p2Alive = battle.sides[1].pokemon.some((m: any) => m.hp > 0);
+  const p1Left = battle.sides[0].pokemon.filter((m: any) => m.hp > 0).length;
+  const p2Left = battle.sides[1].pokemon.filter((m: any) => m.hp > 0).length;
+  const p1Alive = p1Left > 0;
+  const p2Alive = p2Left > 0;
   let winner: 'p1' | 'p2' | null = null;
   if (battle.ended || rounds >= MAX_TURNS) {
     if (p1Alive && !p2Alive) winner = 'p1';
@@ -193,6 +195,8 @@ export async function runBattleMetamon(
   return {
     winner,
     turns: battle.turn,
+    p1Left,
+    p2Left,
     log: opts.captureLog ? header.concat(state.broadcast) : undefined,
   };
 }

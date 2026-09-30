@@ -23,6 +23,13 @@ export interface RunJob {
   seed: string;
 }
 
+export interface BattleScore {
+  winner: 'p1' | 'p2' | null;
+  turns: number;
+  p1Left: number;
+  p2Left: number;
+}
+
 export interface MatchupResult {
   refId: string;
   name: string;
@@ -30,6 +37,8 @@ export interface MatchupResult {
   wins: number;
   losses: number;
   draws: number;
+  /** Per-battle results (winner, turns, mons remaining). Absent on runs recorded before this field existed. */
+  battles?: BattleScore[];
 }
 
 type Out =
@@ -119,6 +128,7 @@ w.onmessage = (e: MessageEvent) => {
       for (let mi = 0; mi < total; mi++) {
         const ref = job.refs[mi];
         let wins = 0, losses = 0, draws = 0;
+        const battles: BattleScore[] = [];
         for (let bi = 0; bi < job.battlesPerMatchup; bi++) {
           if (cancelled) {
             post({type: 'cancelled'});
@@ -132,6 +142,7 @@ w.onmessage = (e: MessageEvent) => {
           if (r.winner === 'p1') wins++;
           else if (r.winner === 'p2') losses++;
           else draws++;
+          battles.push({winner: r.winner, turns: r.turns, p1Left: r.p1Left ?? 0, p2Left: r.p2Left ?? 0});
           post({
             type: 'progress',
             matchupIndex: mi,
@@ -152,6 +163,7 @@ w.onmessage = (e: MessageEvent) => {
           wins,
           losses,
           draws,
+          battles,
         };
         results.push(result);
         post({type: 'matchup', index: mi, result});

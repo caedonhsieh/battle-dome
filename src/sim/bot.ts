@@ -14,6 +14,9 @@ export interface BattleResult {
   turns: number;
   /** Full public protocol log. Only populated when captureLog is requested. */
   log?: string[];
+  /** Pokémon still standing per side at battle end (useful per-game detail). */
+  p1Left?: number;
+  p2Left?: number;
 }
 
 export interface RunBattleOpts {
