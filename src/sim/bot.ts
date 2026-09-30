@@ -7,6 +7,7 @@
  * free of browser-only APIs so the scripts can import it.
  */
 import {Battle, Teams, Dex, TeamValidator} from '@pkmn/sim';
+import type {Side, Step as PilotStep} from './metamon/pilot.js';
 
 export const MAX_TURNS = 200;
 const FORMAT = 'gen9ou';
@@ -36,6 +37,12 @@ export interface RunBattleOpts {
    */
   p1Name?: string;
   p2Name?: string;
+  /**
+   * Debug/validation hook: fired by the Metamon pilot after each accepted
+   * decision. Used by Node scripts to capture model feeds; never set by the
+   * app itself.
+   */
+  onDecision?: (side: Side, step: PilotStep, logits: number[], action: number) => void;
 }
 
 const HAZARDS = ['stealthrock', 'spikes', 'toxicspikes', 'stickyweb'] as const;

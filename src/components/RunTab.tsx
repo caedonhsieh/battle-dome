@@ -2,6 +2,7 @@ import {useEffect, useState} from 'react';
 import type {RunConfig, SavedTeam} from '../lib/types';
 import {randomSeed} from '../lib/types';
 import {clampBattlesPerMatchup, fmtElapsed, summarize} from '../lib/run';
+import {clampWorkerCount} from '../sim/client';
 import type {RunState} from '../lib/useBenchmarkRun';
 import type {RefTeam} from '../sim/client';
 import SpriteStrip from './SpriteStrip';
@@ -32,10 +33,11 @@ export default function RunTab({
   onSelectTeam,
 }: Props) {
   const running = runState.status === 'running';
-  const p = runState.progress;
+  const pool = runState.pool;
   const mp = runState.modelProgress;
+  const workerCount = clampWorkerCount(config.workerCount ?? 2);
   const totalBattles = selectedRefs.length * clampBattlesPerMatchup(config.battlesPerMatchup);
-  const doneBattles = p ? p.matchupsDone * p.battlesPerMatchup + p.battle : 0;
+  const doneBattles = pool ? pool.battlesDone : 0;
   const pct = totalBattles > 0 ? Math.min(100, (doneBattles / totalBattles) * 100) : 0;
   const canStart = !running && selectedTeamId && selectedRefs.length > 0;
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
@@ -48,22 +50,13 @@ export default function RunTab({
     return () => clearInterval(t);
   }, [running]);
 
-  const base = summarize(runState.results);
-  // In-progress matchup tally, updated after every battle. Guarded so the
-  // final tally isn't double-counted once the matchup result lands in results.
-  const inProgressRow =
-    p && !mp && runState.results.length <= p.matchupIndex
-      ? {name: p.matchupName, wins: p.matchupWins, losses: p.matchupLosses, draws: p.matchupDraws}
-      : null;
-  const liveTotals = {
-    wins: base.wins + (inProgressRow?.wins ?? 0),
-    losses: base.losses + (inProgressRow?.losses ?? 0),
-    draws: base.draws + (inProgressRow?.draws ?? 0),
-  };
-  const inProgressBattles = inProgressRow
-    ? inProgressRow.wins + inProgressRow.losses + inProgressRow.draws
-    : 0;
-  const hasPartialResults = runState.results.length > 0 || inProgressBattles > 0;
+  // Matchup rows update incrementally as battles land (possibly out of order
+  // across workers). Rows with finished battles are shown; rows still in
+  // flight get the live badge. No single "current matchup" is faked.
+  const battlesPerMatchup = clampBattlesPerMatchup(config.battlesPerMatchup);
+  const liveRows = runState.results.filter((r) => (r.battles?.length ?? 0) > 0);
+  const liveTotals = summarize(runState.results);
+  const hasPartialResults = liveRows.length > 0;
   const [cancelDialog, setCancelDialog] = useState(false);
   let elapsedText = '';
   if (running && runState.startedAt) {
@@ -102,6 +95,18 @@ export default function RunTab({
               value={config.battlesPerMatchup}
               onChange={(e) => onConfigChange({...config, battlesPerMatchup: Number(e.target.value)})}
               disabled={running}
+            />
+          </label>
+          <label className="field">
+            <span>Workers (1–8)</span>
+            <input
+              type="number"
+              min={1}
+              max={8}
+              value={workerCount}
+              onChange={(e) => onConfigChange({...config, workerCount: Number(e.target.value)})}
+              disabled={running}
+              title="Parallel battles — each worker loads its own model session"
             />
           </label>
           <label className="field">
@@ -165,42 +170,35 @@ export default function RunTab({
                 {mp.stage === 'downloading'
                   ? `Downloading model… ${Math.round(mp.fraction * 100)}% (95MB, one-time)`
                   : mp.stage === 'cached'
-                    ? 'Model loaded from cache…'
-                    : 'Loading model…'}
+                    ? `Model loaded from cache on ${workerCount} worker${workerCount === 1 ? '' : 's'}…`
+                    : `Loading model on ${workerCount} worker${workerCount === 1 ? '' : 's'}…`}
               </p>
             </>
           )}
-          {running && p && !mp && (
+          {running && pool && !mp && (
             <>
               <div className="progress">
                 <div className="progress-bar" style={{width: `${pct}%`}} />
               </div>
               <p className="muted">
-                {p.matchupName} — battle {p.battle}/{p.battlesPerMatchup} · matchup{' '}
-                {p.matchupIndex + 1}/{p.matchupsTotal} · {doneBattles}/{totalBattles} battles
+                {doneBattles}/{totalBattles} battles · {workerCount} worker{workerCount === 1 ? '' : 's'}
                 {elapsedText && <> · {elapsedText}</>}
               </p>
             </>
           )}
-          {running && p && !mp && (runState.results.length > 0 || inProgressRow) && (
+          {running && pool && !mp && liveRows.length > 0 && (
             <div className="live-results">
               <p className="muted tiny">
                 Running total:{' '}
                 <ScoreLine wins={liveTotals.wins} losses={liveTotals.losses} draws={liveTotals.draws} />
               </p>
               <ul className="mini-list">
-                {inProgressRow && (
-                    <li key="live" className="live-row">
-                      <span>{inProgressRow.name} <span className="badge live-badge">live</span></span>
-                      <span className="num">
-                        <ScoreLine wins={inProgressRow.wins} losses={inProgressRow.losses} draws={inProgressRow.draws} />
-                      </span>
-                    </li>
-                  )}
-                {[...runState.results].reverse().map((r) => {
+                {[...liveRows].reverse().map((r) => {
+                  const done = r.battles?.length ?? 0;
+                  const live = done < battlesPerMatchup;
                   return (
-                    <li key={r.refId}>
-                      <span>{r.name}</span>
+                    <li key={r.refId} className={live ? 'live-row' : undefined}>
+                      <span>{r.name} {live && <span className="badge live-badge">live</span>}</span>
                       <span className="num">
                         <ScoreLine wins={r.wins} losses={r.losses} draws={r.draws} />
                       </span>
@@ -210,7 +208,7 @@ export default function RunTab({
               </ul>
             </div>
           )}
-          {running && !p && !mp && <p className="muted">Starting worker…</p>}
+          {running && !pool && !mp && <p className="muted">Starting workers…</p>}
           {runState.status === 'error' && (
             <div className="alert error">{runState.error}</div>
           )}
@@ -228,8 +226,7 @@ export default function RunTab({
               <p className="muted">
                 {hasPartialResults ? (
                   <>So far: <ScoreLine wins={liveTotals.wins} losses={liveTotals.losses} draws={liveTotals.draws} />{' '}
-                  across {runState.results.length + (inProgressBattles > 0 ? 1 : 0)} matchup
-                  {runState.results.length + (inProgressBattles > 0 ? 1 : 0) === 1 ? '' : 's'}.</>
+                  across {liveRows.length} matchup{liveRows.length === 1 ? '' : 's'}.</>
                 ) : (
                   <>No battles have finished yet.</>
                 )}{' '}

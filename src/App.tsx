@@ -83,7 +83,7 @@ export default function App() {
     metaRef.current = built.meta;
     refsRef.current = built.job.refs;
     savedRunRef.current = false;
-    run.start(built.job);
+    run.start(built.job, config.workerCount ?? 2);
     setTab('run');
   }, [teams, selectedTeamId, selectedRefs, config, run]);
 
@@ -124,21 +124,9 @@ export default function App() {
     cancelChoiceRef.current = null;
     if (choice === 'keep' && metaRef.current) {
       savedRunRef.current = true;
-      const results = [...run.state.results];
-      const p = run.state.progress;
-      if (p && p.matchupWins + p.matchupLosses + p.matchupDraws > 0) {
-        const ref = refsRef.current[p.matchupIndex];
-        if (ref && !results.some((r) => r.refId === ref.id)) {
-          results.push({
-            refId: ref.id,
-            name: ref.name,
-            archetype: ref.archetype,
-            wins: p.matchupWins,
-            losses: p.matchupLosses,
-            draws: p.matchupDraws,
-          });
-        }
-      }
+      // Pool rows update incrementally as battles land, so the state already
+      // holds every finished battle; just drop matchups with none.
+      const results = run.state.results.filter((r) => (r.battles?.length ?? 0) > 0);
       const record = buildRunRecord({
         meta: metaRef.current,
         refs: refsRef.current,

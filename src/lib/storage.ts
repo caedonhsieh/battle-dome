@@ -32,7 +32,12 @@ export const store = {
   setTeams: (t: SavedTeam[]) => write(K.teams, t),
   getCustomRefs: (): CustomRef[] => read(K.customRefs, []),
   setCustomRefs: (r: CustomRef[]) => write(K.customRefs, r),
-  getConfig: (): RunConfig => read(K.config, {battlesPerMatchup: 20, seed: randomSeed()}),
+  getConfig: (): RunConfig => ({
+    battlesPerMatchup: 20,
+    seed: randomSeed(),
+    workerCount: 2,
+    ...read<Partial<RunConfig>>(K.config, {}),
+  }),
   setConfig: (c: RunConfig) => write(K.config, c),
   getHistory: (): RunRecord[] => read(K.history, []),
   setHistory: (h: RunRecord[]) => write(K.history, h),

@@ -146,6 +146,7 @@ export async function runBattleMetamon(
   battle.sendUpdates();
 
   const mb = new MetamonBattle(runner.ort, runner.session);
+  if (opts.onDecision) mb.onDecision = opts.onDecision;
   const consumed = {b: {p1: 0, p2: 0} as Record<Side, number>, s: {p1: 0, p2: 0} as Record<Side, number>};
 
   let rounds = 0;

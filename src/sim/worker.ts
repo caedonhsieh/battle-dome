@@ -30,6 +30,32 @@ export interface BattleScore {
   p2Left: number;
   /** Model actions that failed to map to a Showdown choice (should stay ~0). */
   unmappable?: number;
+  /**
+   * 0-based battle within the matchup. Set on pool-mode results so the client
+   * can keep per-matchup battles in canonical order when they land out of
+   * order. Absent on runs recorded before the worker pool.
+   */
+  battleIndex?: number;
+}
+
+/** One battle assigned to a pool worker. */
+export interface PoolBattle {
+  matchupIndex: number;
+  battleIndex: number;
+  ref: RefTeam;
+}
+
+/**
+ * Pool-mode job: this worker runs `battles` sequentially and reports each
+ * battle as it finishes. Battles are pre-assigned by the client (round-robin
+ * over (matchupIndex, battleIndex)); per-battle seeds derive from
+ * (seed, matchupIndex, battleIndex), so results are identical regardless of
+ * worker count or completion order.
+ */
+export interface PoolJob {
+  userTeam: {name: string; paste: string};
+  seed: string;
+  battles: PoolBattle[];
 }
 
 export interface MatchupResult {
@@ -48,9 +74,8 @@ type Out =
   | {type: 'provider'; provider: MetamonProvider}
   | {type: 'replay-log'; matchupIndex: number; battleIndex: number; winner: 'p1' | 'p2' | null; turns: number; log: string[]}
   | {type: 'replay-error'; matchupIndex: number; battleIndex: number; message: string}
-  | {type: 'progress'; matchupIndex: number; matchupName: string; battle: number; battlesPerMatchup: number; matchupsDone: number; matchupsTotal: number; matchupWins: number; matchupLosses: number; matchupDraws: number}
-  | {type: 'matchup'; index: number; result: MatchupResult}
-  | {type: 'done'; results: MatchupResult[]}
+  | {type: 'battle'; matchupIndex: number; battleIndex: number; score: BattleScore}
+  | {type: 'pool-done'}
   | {type: 'cancelled'}
   | {type: 'error'; message: string};
 
@@ -82,7 +107,7 @@ async function ensureSession(post: Post): Promise<ort.InferenceSession> {
 /** Messages the worker accepts — the inbound mirror of the `Out` union. */
 type In =
   | {type: 'cancel'}
-  | {type: 'run'; job: RunJob}
+  | {type: 'run-pool'; job: PoolJob}
   | {
       type: 'replay';
       userPaste?: string;
@@ -124,7 +149,7 @@ w.onmessage = (e: MessageEvent) => {
     })();
     return;
   }
-  if (msg.type !== 'run' || !msg.job) return;
+  if (msg.type !== 'run-pool' || !msg.job) return;
   cancelled = false;
   const job = msg.job;
   const post = (m: Out) => w.postMessage(m);
@@ -140,52 +165,31 @@ w.onmessage = (e: MessageEvent) => {
       const runner: MetamonRunner = {ort, session};
       const isCancelled = () => cancelled;
 
-      const results: MatchupResult[] = [];
-      const total = job.refs.length;
-      for (let mi = 0; mi < total; mi++) {
-        const ref = job.refs[mi];
-        let wins = 0, losses = 0, draws = 0;
-        const battles: BattleScore[] = [];
-        for (let bi = 0; bi < job.battlesPerMatchup; bi++) {
-          if (cancelled) {
-            post({type: 'cancelled'});
-            return;
-          }
-          const r = await runBattleMetamon(runner, job.userTeam.paste, ref.paste, {
-            seed: job.seed,
-            matchupIndex: mi,
-            battleIndex: bi,
-          }, isCancelled);
-          if (r.winner === 'p1') wins++;
-          else if (r.winner === 'p2') losses++;
-          else draws++;
-          battles.push({winner: r.winner, turns: r.turns, p1Left: r.p1Left ?? 0, p2Left: r.p2Left ?? 0, unmappable: r.unmappable ?? 0});
-          post({
-            type: 'progress',
-            matchupIndex: mi,
-            matchupName: ref.name,
-            battle: bi + 1,
-            battlesPerMatchup: job.battlesPerMatchup,
-            matchupsDone: mi,
-            matchupsTotal: total,
-            matchupWins: wins,
-            matchupLosses: losses,
-            matchupDraws: draws,
-          });
+      for (const b of job.battles) {
+        if (cancelled) {
+          post({type: 'cancelled'});
+          return;
         }
-        const result: MatchupResult = {
-          refId: ref.id,
-          name: ref.name,
-          archetype: ref.archetype,
-          wins,
-          losses,
-          draws,
-          battles,
-        };
-        results.push(result);
-        post({type: 'matchup', index: mi, result});
+        const r = await runBattleMetamon(runner, job.userTeam.paste, b.ref.paste, {
+          seed: job.seed,
+          matchupIndex: b.matchupIndex,
+          battleIndex: b.battleIndex,
+        }, isCancelled);
+        post({
+          type: 'battle',
+          matchupIndex: b.matchupIndex,
+          battleIndex: b.battleIndex,
+          score: {
+            winner: r.winner,
+            turns: r.turns,
+            p1Left: r.p1Left ?? 0,
+            p2Left: r.p2Left ?? 0,
+            unmappable: r.unmappable ?? 0,
+            battleIndex: b.battleIndex,
+          },
+        });
       }
-      post({type: 'done', results});
+      post({type: 'pool-done'});
     } catch (err: any) {
       if (err instanceof CancelledError) {
         post({type: 'cancelled'});

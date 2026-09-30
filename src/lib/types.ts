@@ -27,6 +27,8 @@ export interface BundledRef {
 export interface RunConfig {
   battlesPerMatchup: number;
   seed: string;
+  /** Number of parallel benchmark workers (1–8). Absent on configs saved before the worker pool. */
+  workerCount?: number;
 }
 
 export interface RunMeta {

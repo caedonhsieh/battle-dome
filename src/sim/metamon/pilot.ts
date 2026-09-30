@@ -35,7 +35,7 @@ export interface OrtLike {
   Tensor: new (type: string, data: unknown, dims: number[]) => unknown;
 }
 
-interface Step {
+export interface Step {
   numbers: number[];
   tokens: number[];
   illegal: boolean[];
@@ -49,15 +49,31 @@ const SIDES: Side[] = ['p1', 'p2'];
 
 /** Fresh per-battle pilot state for both sides sharing one model session. */
 export class MetamonBattle {
+  /** Debug hook: fired after each accepted decision (side, step fed, logits, chosen action). */
+  onDecision?: (side: Side, step: Step, logits: number[], action: number) => void;
   private trackers: Record<Side, BattleTracker> = {
     p1: new BattleTracker(),
     p2: new BattleTracker(),
   };
   private v3 = new V3ObservationSpace();
-  private histories: Record<Side, Step[]> = {p1: [], p2: []};
+  /**
+   * Per-side KV-cache state. Each side gets an independent cache so the two
+   * players' histories never interleave. Caches are zero-initialized;
+   * unused slots are masked by the model via seq_lens.
+   * Shape: [6 layers, 1 batch, 200 max seq, 12 heads, 64 head dim].
+   */
+  private keyCache: Record<Side, Float32Array> = {
+    p1: new Float32Array(6 * 1 * 200 * 12 * 64),
+    p2: new Float32Array(6 * 1 * 200 * 12 * 64),
+  };
+  private valCache: Record<Side, Float32Array> = {
+    p1: new Float32Array(6 * 1 * 200 * 12 * 64),
+    p2: new Float32Array(6 * 1 * 200 * 12 * 64),
+  };
+  /** Number of steps currently cached per side (= write position = time index). */
+  private seqLen: Record<Side, number> = {p1: 0, p2: 0};
   private lastStates: Record<Side, UniversalState | null> = {p1: null, p2: null};
   private prevActions: Record<Side, number | null> = {p1: null, p2: null};
-  private t: Record<Side, number> = {p1: 0, p2: 0};
   /** Legal-by-tracker actions that failed to map to a Showdown choice (should stay ~0). */
   unmappable = 0;
 
@@ -101,9 +117,10 @@ export class MetamonBattle {
       rl2s[1 + prev] = 1;
     }
 
-    const step: Step = {numbers, tokens, illegal, rl2s, t: this.t[side]};
-    const history = [...this.histories[side], step];
-    const logits = await this.infer(history);
+    const step: Step = {numbers, tokens, illegal, rl2s, t: this.seqLen[side]};
+    // KV-cache inference: feed only the new step; the model returns updated
+    // caches which are committed below iff a choice maps successfully.
+    const {logits, newKeyCache, newValCache} = await this.inferStep(side, step);
 
     // Try legal actions in descending logit order and take the first one that
     // maps to a real Showdown choice. A single unmappable action (e.g. a
@@ -118,10 +135,13 @@ export class MetamonBattle {
       const order = actionIdxToOrder(tr, a);
       const choice = order ? orderToChoice(tr, order) : null;
       if (choice) {
-        this.histories[side] = history;
+        // Commit the KV cache: the step we just fed is now part of history.
+        this.keyCache[side] = newKeyCache;
+        this.valCache[side] = newValCache;
+        this.seqLen[side]++;
         this.lastStates[side] = state;
         this.prevActions[side] = a;
-        this.t[side]++;
+        this.onDecision?.(side, step, logits, a);
         return choice;
       }
       this.unmappable++;
@@ -129,34 +149,43 @@ export class MetamonBattle {
     return null;
   }
 
-  private async infer(history: Step[]): Promise<number[]> {
-    const T = history.length;
-    const numbers = new Float32Array(T * 55);
-    const tokens = new BigInt64Array(T * 106);
-    const illegal = new Uint8Array(T * 13);
-    const rl2s = new Float32Array(T * 14);
-    const timeIdxs = new BigInt64Array(T);
-    history.forEach((s, i) => {
-      s.numbers.forEach((v, j) => (numbers[i * 55 + j] = v));
-      s.tokens.forEach((v, j) => (tokens[i * 106 + j] = BigInt(v)));
-      s.illegal.forEach((v, j) => (illegal[i * 13 + j] = v ? 1 : 0));
-      s.rl2s.forEach((v, j) => (rl2s[i * 14 + j] = v));
-      timeIdxs[i] = BigInt(s.t);
-    });
+  /**
+   * Run one KV-cache inference step for `side`. Feeds only the new step's
+   * tensors ([1,1,...]) plus the side's current cache; returns the logits and
+   * the updated caches (not yet committed — the caller commits on success).
+   */
+  private async inferStep(side: Side, s: Step): Promise<{
+    logits: number[];
+    newKeyCache: Float32Array;
+    newValCache: Float32Array;
+  }> {
     const {Tensor} = this.ort;
+    const numbers = new Float32Array(s.numbers);
+    const tokens = new BigInt64Array(s.tokens.map(BigInt));
+    const illegal = new Uint8Array(s.illegal.map((v) => (v ? 1 : 0)));
+    const rl2s = new Float32Array(s.rl2s);
+    const timeIdxs = new BigInt64Array([BigInt(s.t)]);
+    const seqLens = new Int32Array([this.seqLen[side]]);
     const feeds: Record<string, unknown> = {
-      numbers: new Tensor('float32', numbers, [1, T, 55]),
-      text_tokens: new Tensor('int64', tokens, [1, T, 106]),
-      illegal_actions: new Tensor('bool', illegal, [1, T, 13]),
-      rl2s: new Tensor('float32', rl2s, [1, T, 14]),
-      time_idxs: new Tensor('int64', timeIdxs, [1, T, 1]),
+      numbers: new Tensor('float32', numbers, [1, 1, 55]),
+      text_tokens: new Tensor('int64', tokens, [1, 1, 106]),
+      illegal_actions: new Tensor('bool', illegal, [1, 1, 13]),
+      rl2s: new Tensor('float32', rl2s, [1, 1, 14]),
+      time_idxs: new Tensor('int64', timeIdxs, [1, 1, 1]),
+      key_cache: new Tensor('float32', this.keyCache[side], [6, 1, 200, 12, 64]),
+      val_cache: new Tensor('float32', this.valCache[side], [6, 1, 200, 12, 64]),
+      seq_lens: new Tensor('int32', seqLens, [1]),
     };
     const out = await this.session.run(feeds);
     const data = out['logits'].data as ArrayLike<number>;
-    // logits shape: [1, T, 13] — take the last timestep.
-    const last: number[] = [];
-    for (let i = 0; i < 13; i++) last.push(Number(data[(T - 1) * 13 + i]));
-    return last;
+    // logits shape: [1,1,13] — consume the 13-value vector robustly.
+    const logits: number[] = [];
+    for (let i = 0; i < 13; i++) logits.push(Number(data[data.length - 13 + i]));
+    return {
+      logits,
+      newKeyCache: new Float32Array(out['new_key_cache'].data as ArrayLike<number>),
+      newValCache: new Float32Array(out['new_val_cache'].data as ArrayLike<number>),
+    };
   }
 }
 
