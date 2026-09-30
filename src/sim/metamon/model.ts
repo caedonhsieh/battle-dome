@@ -1,13 +1,14 @@
 /**
  * Metamon Kadabra3 model loading for the browser.
  *
- * The 94.3MB fp16 KV-cache ONNX model is fetched once from the same-origin
+ * The ~90MB fp16 KV-cache ONNX model is fetched once from the same-origin
  * models/ directory, cached in IndexedDB, then loaded into onnxruntime-web.
  * WebGPU is tried first with a warmup probe; any failure falls back to WASM.
  *
  * KV-cache: instead of re-feeding the full decision history every turn
  * (O(T²)), the model carries a per-side key/value cache across decisions and
- * only the new step is fed (O(T)). See pilot.ts.
+ * only the new step is fed (O(T)). Both sides are batched into a single
+ * forward pass (static batch=2 graph). See pilot.ts.
  *
  * This module is web-only (imports onnxruntime-web). The pilot in pilot.ts
  * takes the loaded session and a minimal ort interface so it can also be
@@ -23,8 +24,8 @@ import * as ort from 'onnxruntime-web';
  * The file lives at models/ on the gh-pages branch only (kept out of the
  * main repo so clones stay small); the release remains the source of truth.
  */
-export const MODEL_URL = `${import.meta.env.BASE_URL}models/kadabra3_kv_fp16_noeinsum.onnx`;
-export const MODEL_VERSION = 'kadabra3-kv-fp16-v1';
+export const MODEL_URL = `${import.meta.env.BASE_URL}models/kadabra3_kv_fp16_b2_noeinsum.onnx`;
+export const MODEL_VERSION = 'kadabra3-kv-fp16-b2-v2';
 /** onnxruntime-web release matching the installed npm version (for wasm binaries). */
 const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/';
 
@@ -111,17 +112,17 @@ function configureOrt(): void {
   // Leave numThreads at default (hardwareConcurrency-based).
 }
 
-/** Tiny warmup probe: 1 timestep of zeros (batch=1 KV), just to prove the EP works end-to-end. */
+/** Tiny warmup probe: 1 timestep of zeros (batch=2), just to prove the EP works end-to-end. */
 async function warmup(session: ort.InferenceSession): Promise<void> {
   const feeds: Record<string, ort.Tensor> = {
-    numbers: new ort.Tensor('float32', new Float32Array(55), [1, 1, 55]),
-    text_tokens: new ort.Tensor('int64', new BigInt64Array(106), [1, 1, 106]),
-    illegal_actions: new ort.Tensor('bool', new Uint8Array(13), [1, 1, 13]),
-    rl2s: new ort.Tensor('float32', new Float32Array(14), [1, 1, 14]),
-    time_idxs: new ort.Tensor('int64', new BigInt64Array(1), [1, 1, 1]),
-    key_cache: new ort.Tensor('float32', new Float32Array(6 * 1 * 200 * 12 * 64), [6, 1, 200, 12, 64]),
-    val_cache: new ort.Tensor('float32', new Float32Array(6 * 1 * 200 * 12 * 64), [6, 1, 200, 12, 64]),
-    seq_lens: new ort.Tensor('int32', new Int32Array(1), [1]),
+    numbers: new ort.Tensor('float32', new Float32Array(2 * 55), [2, 1, 55]),
+    text_tokens: new ort.Tensor('int64', new BigInt64Array(2 * 106), [2, 1, 106]),
+    illegal_actions: new ort.Tensor('bool', new Uint8Array(2 * 13), [2, 1, 13]),
+    rl2s: new ort.Tensor('float32', new Float32Array(2 * 14), [2, 1, 14]),
+    time_idxs: new ort.Tensor('int64', new BigInt64Array(2), [2, 1, 1]),
+    key_cache: new ort.Tensor('float32', new Float32Array(6 * 2 * 200 * 12 * 64), [6, 2, 200, 12, 64]),
+    val_cache: new ort.Tensor('float32', new Float32Array(6 * 2 * 200 * 12 * 64), [6, 2, 200, 12, 64]),
+    seq_lens: new ort.Tensor('int32', new Int32Array(2), [2]),
   };
   const out = await session.run(feeds);
   const logits = out['logits'];

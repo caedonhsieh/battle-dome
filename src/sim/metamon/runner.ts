@@ -12,7 +12,7 @@
  */
 import {Battle, Teams} from '@pkmn/sim';
 import {MAX_TURNS, hashSeed, type BattleResult, type RunBattleOpts} from '../bot.js';
-import {MetamonBattle, type OrtLike, type OrtSessionLike, type Side} from './pilot.js';
+import {MetamonBattle, type OrtLike, type OrtSessionLike, type Side, type PreparedDecision, type InferenceResult} from './pilot.js';
 import type {ShowdownRequest} from './battle.js';
 
 export class CancelledError extends Error {
@@ -152,6 +152,11 @@ export async function runBattleMetamon(
   let rounds = 0;
   while (!battle.ended && rounds < MAX_TURNS) {
     if (isCancelled()) throw new CancelledError();
+    // Phase 1: prepare both sides (build requests, feed lines, build steps).
+    // Phase 2: one batched inference for every side that needs it.
+    // Phase 3: map to choices and commit.
+    const prepared: {side: Side; prep: PreparedDecision}[] = [];
+    const resolved = new Map<Side, string | null>();
     for (const side of ['p1', 'p2'] as const) {
       const s: any = (battle as any)[side];
       if (!s.requestState) continue;
@@ -162,16 +167,37 @@ export async function runBattleMetamon(
       const req = buildRequest(battle, side);
       const lines = takeNewLines(state, side, consumed);
       mb.feedLines(side, lines);
+      const outcome = mb.prepare(side, req);
+      if (outcome.kind === 'choice') resolved.set(side, outcome.choice);
+      else if (outcome.kind === 'infer') prepared.push({side, prep: outcome.prepared});
+      else resolved.set(side, null);
+    }
+    let results: InferenceResult[] = [];
+    if (prepared.length > 0) {
+      try {
+        results = await mb.inferBatch(prepared.map((p) => p.prep));
+      } catch {
+        results = [];
+      }
+    }
+    for (let i = 0; i < prepared.length; i++) {
+      const {side, prep} = prepared[i];
       let choice: string | null = null;
       try {
-        choice = await mb.decide(side, req);
+        choice = results[i] ? mb.finish(prep, results[i]) : null;
       } catch {
         choice = null;
       }
+      resolved.set(side, choice);
+    }
+    for (const side of ['p1', 'p2'] as const) {
+      if (!resolved.has(side)) continue;
+      const s: any = (battle as any)[side];
+      const choice = resolved.get(side);
       let ok = false;
       if (choice) ok = s.choose(choice);
       if (!ok) {
-        // Last resort only: decide() already falls back through the model's
+        // Last resort only: finish() already falls back through the model's
         // ranked legal actions, so reaching here means nothing mapped.
         // Never silent — a firing fallback is a bug, not a strategy.
         console.warn(`[metamon] autoChoose last-resort fallback for ${side} (choice was ${choice})`);

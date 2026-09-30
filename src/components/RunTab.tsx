@@ -97,18 +97,21 @@ export default function RunTab({
               disabled={running}
             />
           </label>
-          <label className="field">
-            <span>Workers (1–8)</span>
-            <input
-              type="number"
-              min={1}
-              max={8}
-              value={workerCount}
-              onChange={(e) => onConfigChange({...config, workerCount: Number(e.target.value)})}
-              disabled={running}
-              title="Parallel battles — each worker loads its own model session"
-            />
-          </label>
+          <details className="advanced-settings">
+            <summary>Advanced settings</summary>
+            <label className="field">
+              <span>Workers (1–8)</span>
+              <input
+                type="number"
+                min={1}
+                max={8}
+                value={workerCount}
+                onChange={(e) => onConfigChange({...config, workerCount: Number(e.target.value)})}
+                disabled={running}
+                title="Parallel battles — each worker loads its own model session"
+              />
+            </label>
+          </details>
           <label className="field">
             <span>Seed</span>
             <span className="inline-form">
