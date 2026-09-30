@@ -111,27 +111,27 @@ export default function RunTab({
                 title="Parallel battles — each worker loads its own model session"
               />
             </label>
+            <label className="field">
+              <span>Seed</span>
+              <span className="inline-form">
+                <input
+                  type="text"
+                  value={config.seed}
+                  onChange={(e) => onConfigChange({...config, seed: e.target.value})}
+                  disabled={running}
+                  maxLength={32}
+                />
+                <button
+                  className="btn small ghost"
+                  disabled={running}
+                  onClick={() => onConfigChange({...config, seed: randomSeed()})}
+                  title="Randomize seed"
+                >
+                  🎲
+                </button>
+              </span>
+            </label>
           </details>
-          <label className="field">
-            <span>Seed</span>
-            <span className="inline-form">
-              <input
-                type="text"
-                value={config.seed}
-                onChange={(e) => onConfigChange({...config, seed: e.target.value})}
-                disabled={running}
-                maxLength={32}
-              />
-              <button
-                className="btn small ghost"
-                disabled={running}
-                onClick={() => onConfigChange({...config, seed: randomSeed()})}
-                title="Randomize seed"
-              >
-                🎲
-              </button>
-            </span>
-          </label>
         </div>
         <p className="muted tiny">
           {selectedRefs.length} reference team{selectedRefs.length === 1 ? '' : 's'} selected →{' '}
