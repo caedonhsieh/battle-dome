@@ -25,7 +25,7 @@ import * as ort from 'onnxruntime-web';
  * main repo so clones stay small); the release remains the source of truth.
  */
 export const MODEL_URL = `${import.meta.env.BASE_URL}models/kadabra3_kv_fp16_b2_noeinsum.onnx`;
-export const MODEL_VERSION = 'kadabra3-kv-fp16-b2-v1';
+export const MODEL_VERSION = 'kadabra3-kv-fp16-b2-v2';
 /** onnxruntime-web release matching the installed npm version (for wasm binaries). */
 const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/';
 
