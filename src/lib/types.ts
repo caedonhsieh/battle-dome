@@ -43,6 +43,8 @@ export interface RunMeta {
   userPaste?: string;
   /** True when the run was cancelled and only partial results were kept. */
   partial?: boolean;
+  /** Wall-clock battle time in ms (excludes model download/load). Absent on old runs. */
+  durationMs?: number;
 }
 
 export interface RunRecord {

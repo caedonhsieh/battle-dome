@@ -96,6 +96,10 @@ export default function App() {
         refs: refsRef.current,
         results: run.state.results,
         provider: run.state.provider,
+        durationMs:
+          run.state.startedAt && run.state.endedAt
+            ? run.state.endedAt - run.state.startedAt
+            : undefined,
       });
       setHistory((h) => [record, ...h]);
       setCurrentView(record);
@@ -141,6 +145,10 @@ export default function App() {
         results,
         provider: run.state.provider,
         partial: true,
+        durationMs:
+          run.state.startedAt && run.state.endedAt
+            ? run.state.endedAt - run.state.startedAt
+            : undefined,
       });
       setHistory((h) => [record, ...h]);
       setCurrentView(record);

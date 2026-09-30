@@ -1,7 +1,7 @@
 import {Fragment, useMemo, useState} from 'react';
 import type {MatchupResult, ReplayRequest, ReplayResult} from '../sim/client';
 import type {RunMeta, RunRecord} from '../lib/types';
-import {METAMON_ENGINE, summarize, winRate} from '../lib/run';
+import {METAMON_ENGINE, fmtElapsed, summarize, winRate} from '../lib/run';
 import {downloadText, slugify} from '../lib/download';
 import SpriteStrip from './SpriteStrip';
 import ScoreLine from './ScoreLine';
@@ -194,6 +194,7 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
               <span className="muted tiny">
                 · {current.meta.battlesPerMatchup} battles/matchup · seed “{current.meta.seed}” ·{' '}
                 {new Date(current.meta.date).toLocaleString()}
+                {current.meta.durationMs != null && <> · {fmtElapsed(current.meta.durationMs / 1000)}</>}
               </span>
             </h3>
             <div className="stat-row">

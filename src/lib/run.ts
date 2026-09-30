@@ -93,11 +93,14 @@ export function buildRunRecord(opts: {
   results: MatchupResult[];
   provider?: MetamonProvider | null;
   partial?: boolean;
+  /** Wall-clock battle time in ms (excludes model download/load). */
+  durationMs?: number | null;
 }): RunRecord {
-  const {refs, results, provider, partial} = opts;
+  const {refs, results, provider, partial, durationMs} = opts;
   const meta: RunMeta = {...opts.meta};
   if (provider) meta.provider = provider;
   if (partial) meta.partial = true;
+  if (durationMs != null && durationMs >= 0) meta.durationMs = Math.round(durationMs);
   const when = new Date(meta.date);
   const stamp = `${when.toLocaleDateString()} ${when.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`;
   return {

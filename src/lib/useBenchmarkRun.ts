@@ -12,6 +12,8 @@ export interface RunState {
   provider: MetamonProvider | null;
   /** Wall-clock ms when the first battle started (excludes model download/load). */
   startedAt: number | null;
+  /** Wall-clock ms when the run finished or was cancelled. */
+  endedAt: number | null;
   results: MatchupResult[];
   error: string | null;
 }
@@ -28,7 +30,7 @@ export function useBenchmarkRun() {
     progress: null,
     modelProgress: null,
     provider: null,
-    startedAt: null,
+    startedAt: null, endedAt: null,
     results: [],
     error: null,
   });
@@ -48,7 +50,7 @@ export function useBenchmarkRun() {
       stopWorker();
       const worker = createBenchmarkWorker();
       workerRef.current = worker;
-      setState({status: 'running', progress: null, modelProgress: null, provider: null, startedAt: null, results: [], error: null});
+      setState({status: 'running', progress: null, modelProgress: null, provider: null, startedAt: null, endedAt: null, results: [], error: null});
       const cancel = startRun(worker, job, {
         onModelProgress: (modelProgress) =>
           setState((s) => ({...s, modelProgress})),
@@ -64,13 +66,13 @@ export function useBenchmarkRun() {
         onMatchup: (_index, result) =>
           setState((s) => ({...s, results: [...s.results, result]})),
         onDone: (results) => {
-          setState((s) => ({...s, status: 'done', results, progress: null, modelProgress: null}));
+          setState((s) => ({...s, status: 'done', results, progress: null, modelProgress: null, endedAt: Date.now()}));
           cancelRef.current = null;
         },
         onCancelled: () => {
           // Keep progress: App may need the in-progress matchup tally to save
           // partial results. RunTab only renders it while running.
-          setState((s) => ({...s, status: 'cancelled', modelProgress: null}));
+          setState((s) => ({...s, status: 'cancelled', modelProgress: null, endedAt: Date.now()}));
           cancelRef.current = null;
         },
         onError: (message) => {
@@ -103,7 +105,7 @@ export function useBenchmarkRun() {
 
   const reset = useCallback(() => {
     stopWorker();
-    setState({status: 'idle', progress: null, modelProgress: null, provider: null, startedAt: null, results: [], error: null});
+    setState({status: 'idle', progress: null, modelProgress: null, provider: null, startedAt: null, endedAt: null, results: [], error: null});
   }, [stopWorker]);
 
   return {state, start, cancel, reset, replay, running: state.status === 'running'};
