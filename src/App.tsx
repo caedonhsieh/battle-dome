@@ -155,19 +155,19 @@ export default function App() {
       <header className="site-header">
         <div className="header-inner">
           <div>
-            <h1 className="logo">Battle Dome</h1>
-            <p className="tagline">Data-driven OU Matchup Evaluation</p>
+            <h1 className="logo">★ DOME OS ★</h1>
+            <p className="tagline">Battle Dome · Data-driven OU Matchup Evaluation</p>
           </div>
           <span className="badge format">{FORMAT_LABEL}</span>
         </div>
         <nav className="tabs">
           {(
             [
-              ['teams', 'My Teams'],
-              ['refs', 'Reference Teams'],
-              ['run', 'Run'],
-              ['results', 'Results'],
-              ['about', 'How it works'],
+              ['run', 'RUN'],
+              ['teams', 'PARTY'],
+              ['refs', 'FOES'],
+              ['results', 'FILES'],
+              ['about', 'GUIDE'],
             ] as [Tab, string][]
           ).map(([id, label]) => (
             <button

@@ -176,7 +176,7 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
       {!current && (
         <p className="muted">
           No results yet. Pick a team and reference teams, then start a run on the{' '}
-          <strong>Run</strong> tab.
+          <strong>RUN</strong> tab.
         </p>
       )}
 

@@ -149,8 +149,8 @@ export default function RunTab({
         )}
         {!canStart && !running && (
           <p className="muted tiny">
-            {!selectedTeamId ? 'Pick a team on the My Teams tab. ' : ''}
-            {selectedRefs.length === 0 ? 'Select at least one reference team on the Reference Teams tab.' : ''}
+            {!selectedTeamId ? 'Pick a team on the PARTY tab. ' : ''}
+            {selectedRefs.length === 0 ? 'Select at least one reference team on the FOES tab.' : ''}
           </p>
         )}
       </div>
