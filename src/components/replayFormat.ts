@@ -36,6 +36,46 @@ function parseSlot(field: string): {side: 'p1' | 'p2'; nick: string} | null {
   return {side: m[1] as 'p1' | 'p2', nick: m[2].trim()};
 }
 
+/** Parse "420/420", "64/100", or "0 fnt" into an HP fraction (0..1). */
+function parseHPFrac(s: string): number | null {
+  const t = (s || '').trim();
+  if (/^0\s*fnt/i.test(t)) return 0;
+  const m = /^(\d+)\s*\/\s*(\d+)/.exec(t);
+  if (!m || Number(m[2]) === 0) return null;
+  return Math.max(0, Math.min(1, Number(m[1]) / Number(m[2])));
+}
+
+/** Extract the "[from] X" source tag from a protocol line's trailing parts. */
+function fromSource(parts: string[]): string | null {
+  for (let i = 3; i < parts.length; i++) {
+    const m = /^\[from\]\s*(.+?)\s*$/.exec(parts[i]);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+/**
+ * Human line for residual/hazard/recoil damage sources.
+ * Returns null when the generic HP-delta line should be used instead.
+ */
+function residualLine(label: string, from: string): string | null {
+  const f = from.toLowerCase();
+  if (f === 'psn' || f === 'tox' || f === 'poison') return `${label} was hurt by poison!`;
+  if (f === 'brn' || f === 'burn') return `${label} was hurt by its burn!`;
+  if (f === 'sandstorm') return `${label} was buffeted by the sandstorm!`;
+  if (f === 'hail' || f === 'snow') return `${label} was buffeted by the hail!`;
+  if (f === 'stealth rock') return `${label} was hurt by Stealth Rock!`;
+  if (f === 'spikes') return `${label} was hurt by Spikes!`;
+  if (f === 'recoil') return `${label} was hurt by recoil!`;
+  if (f === 'confusion') return null; // already narrated by the -activate line
+  if (f === 'leech seed' || f === 'move: leech seed') return `${label}'s health was sapped by Leech Seed!`;
+  const ab = /^ability:\s*(.+)$/i.exec(from);
+  if (ab) return `${label} was hurt by ${ab[1]}!`;
+  const it = /^item:\s*(.+)$/i.exec(from);
+  if (it) return `${label} was hurt by its ${it[1]}!`;
+  return null;
+}
+
 const SKIP = new Set([
   'init', 'title', 'j', 'player', 'gametype', 'gen', 'tier', 'rated', 'rule',
   'clearpoke', 'poke', 'teamsize', 'start', 'upkeep', 'inactive', 'html',
@@ -81,6 +121,8 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
   };
   const info = (text: string) => out.push({text, kind: 'info'});
   const event = (text: string) => out.push({text, kind: 'event'});
+  /** Last known HP fraction per side, so damage lines can report deltas. */
+  const hp = new Map<string, number>();
 
   for (const raw of canonicalLines(log)) {
     const parts = raw.slice(1).split('|');
@@ -97,15 +139,22 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
         const species = (parts[2] || '').split(',')[0].trim();
         const label = s ? `${s.side === 'p1' ? p1Name : p2Name}\u2019s ${s.nick}` : parts[1];
         const extra = s && species && species !== s.nick ? ` (${species})` : '';
+        if (s) {
+          const f = parseHPFrac(parts[3]);
+          hp.set(s.side, f ?? 1);
+        }
         event(`${label}${extra} ${cmd === 'drag' ? 'was dragged out' : 'was sent out'}!`);
         break;
       }
       case 'move':
         event(`${who(parts[1])} used ${parts[2]}!`);
         break;
-      case 'faint':
+      case 'faint': {
+        const s = parseSlot(parts[1]);
+        if (s) hp.set(s.side, 0);
         event(`${who(parts[1])} fainted!`);
         break;
+      }
       case 'win': {
         // The raw log's |win| line carries the side's display name
         // (battle.join is given the team names), so use it directly.
@@ -244,11 +293,47 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
       case '-enditem':
         event(`${who(parts[1])}'s ${parts[2] || 'item'} was used up!`);
         break;
-      case '-heal':
       case '-damage':
-      case '-sethp':
-        // HP churn is noise; faints carry the signal.
+      case '-sethp': {
+        const s = parseSlot(parts[1]);
+        const key = s ? s.side : parts[1];
+        const label = who(parts[1]);
+        const cur = parseHPFrac(parts[2]);
+        const prev = hp.get(key);
+        if (cur !== null) hp.set(key, cur);
+        const from = fromSource(parts);
+        if (from) {
+          const line = residualLine(label, from);
+          if (line) {
+            event(line);
+            break;
+          }
+          if (/^confusion$/i.test(from)) break; // already narrated by the -activate line
+        }
+        if (prev !== undefined && cur !== null) {
+          const delta = Math.round((prev - cur) * 100);
+          if (delta > 0) event(`${label} lost ${delta}% of its health!`);
+          else if (delta < 0) event(`${label} regained ${-delta}% of its health!`);
+          // delta 0 (e.g. [silent]) means nothing visible happened
+        } else if (cur !== null) {
+          event(`${label} is at ${Math.round(cur * 100)}% HP.`);
+        }
         break;
+      }
+      case '-heal': {
+        const s = parseSlot(parts[1]);
+        const key = s ? s.side : parts[1];
+        const label = who(parts[1]);
+        const cur = parseHPFrac(parts[2]);
+        const prev = hp.get(key);
+        if (cur !== null) hp.set(key, cur);
+        if (prev !== undefined && cur !== null && cur > prev) {
+          event(`${label} regained ${Math.round((cur - prev) * 100)}% of its health!`);
+        } else {
+          event(`${label} restored its health!`);
+        }
+        break;
+      }
       case 'message':
         info(parts.slice(1).join(' '));
         break;
