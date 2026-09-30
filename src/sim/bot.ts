@@ -22,6 +22,13 @@ export interface RunBattleOpts {
   battleIndex: number;
   /** When true, the runner keeps the full public battle log in result.log. */
   captureLog?: boolean;
+  /**
+   * Readable player names shown in the log's |player| and |win| lines.
+   * Sanitized before use (| and newlines are protocol separators).
+   * Defaults to 'P1'/'P2'.
+   */
+  p1Name?: string;
+  p2Name?: string;
 }
 
 const HAZARDS = ['stealthrock', 'spikes', 'toxicspikes', 'stickyweb'] as const;

@@ -69,7 +69,7 @@ async function ensureSession(post: Post): Promise<ort.InferenceSession> {
 }
 
 w.onmessage = (e: MessageEvent) => {
-  const msg = e.data as {type: string; job?: RunJob; userPaste?: string; refPaste?: string; seed?: string; matchupIndex?: number; battleIndex?: number};
+  const msg = e.data as {type: string; job?: RunJob; userPaste?: string; refPaste?: string; seed?: string; matchupIndex?: number; battleIndex?: number; p1Name?: string; p2Name?: string};
   if (msg.type === 'cancel') {
     cancelled = true;
     return;
@@ -77,7 +77,7 @@ w.onmessage = (e: MessageEvent) => {
   // On-demand replay: re-simulate one battle of a matchup (deterministic seed,
   // so it is the exact same battle) and return its full protocol log.
   if (msg.type === 'replay') {
-    const {userPaste = '', refPaste = '', seed = '', matchupIndex = 0, battleIndex = 0} = msg;
+    const {userPaste = '', refPaste = '', seed = '', matchupIndex = 0, battleIndex = 0, p1Name = '', p2Name = ''} = msg;
     const post = (m: Out) => w.postMessage(m);
     void (async () => {
       try {
@@ -88,6 +88,8 @@ w.onmessage = (e: MessageEvent) => {
           matchupIndex,
           battleIndex,
           captureLog: true,
+          p1Name,
+          p2Name,
         }, () => false);
         post({type: 'replay-log', matchupIndex, battleIndex, winner: r.winner, turns: r.turns, log: r.log ?? []});
       } catch (err: any) {

@@ -22,6 +22,12 @@ export class CancelledError extends Error {
   }
 }
 
+/** Sanitize a display name for use in protocol lines (| and newlines are separators). */
+function cleanName(name: string | undefined, fallback: string): string {
+  const cleaned = (name ?? '').replace(/[|\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
+  return cleaned || fallback;
+}
+
 /* ------------------------------------------------------------------ */
 /* SplitMix32                                                          */
 /* ------------------------------------------------------------------ */
@@ -133,8 +139,10 @@ export async function runBattleMetamon(
   const mix = splitmix32(hashSeed(`${opts.seed}|${opts.matchupIndex}|${opts.battleIndex}`));
   const battleSeeds = [mix(), mix(), mix(), mix()];
   const battle = new Battle({formatid: 'gen9ou', seed: battleSeeds, send} as any);
-  battle.join('p1' as any, 'P1', 1 as any, Teams.pack(teamA));
-  battle.join('p2' as any, 'P2', 1 as any, Teams.pack(teamB));
+  const p1Name = cleanName(opts.p1Name, 'P1');
+  const p2Name = cleanName(opts.p2Name, 'P2');
+  battle.join('p1' as any, p1Name, 1 as any, Teams.pack(teamA));
+  battle.join('p2' as any, p2Name, 1 as any, Teams.pack(teamB));
   battle.sendUpdates();
 
   const mb = new MetamonBattle(runner.ort, runner.session);
@@ -176,9 +184,15 @@ export async function runBattleMetamon(
     if (p1Alive && !p2Alive) winner = 'p1';
     else if (p2Alive && !p1Alive) winner = 'p2';
   }
+  // The sim already emits the standard server header (|t:|, |gametype|,
+  // |player|, |gen|, |tier|, |rule|..., |clearpoke|, |poke|, |teampreview|,
+  // |teamsize|, |start|). Prepend the room-level |j| join lines so the
+  // captured log is a complete standard Showdown battle log, usable with
+  // replay-converter tools. The pretty formatter skips |j| lines.
+  const header = [`|j|☆${p1Name}`, `|j|☆${p2Name}`];
   return {
     winner,
     turns: battle.turn,
-    log: opts.captureLog ? state.broadcast.slice() : undefined,
+    log: opts.captureLog ? header.concat(state.broadcast) : undefined,
   };
 }

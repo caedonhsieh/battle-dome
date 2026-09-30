@@ -107,8 +107,9 @@ export function formatReplayLog(log: string[], p1Name: string, p2Name: string): 
         event(`${who(parts[1])} fainted!`);
         break;
       case 'win': {
-        const w = parts[1] === 'P1' ? p1Name : parts[1] === 'P2' ? p2Name : parts[1];
-        out.push({text: `${w} wins the battle!`, kind: 'result'});
+        // The raw log's |win| line carries the side's display name
+        // (battle.join is given the team names), so use it directly.
+        out.push({text: `${parts[1]} wins the battle!`, kind: 'result'});
         break;
       }
       case 'tie':

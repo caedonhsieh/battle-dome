@@ -42,8 +42,10 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
   const [replayMatchup, setReplayMatchup] = useState<MatchupResult | null>(null);
   const [replayBattle, setReplayBattle] = useState(0);
   const [replayLines, setReplayLines] = useState<ReplayLine[] | null>(null);
+  const [replayRawLog, setReplayRawLog] = useState<string[] | null>(null);
   const [replayLoading, setReplayLoading] = useState(false);
   const [replayError, setReplayError] = useState<string | null>(null);
+  const [replayCopied, setReplayCopied] = useState(false);
 
   const closeReplay = () => {
     setReplayTitle(null);
@@ -67,6 +69,7 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
     setReplayBattle(battleIndex);
     setReplayTitle(`${current.meta.teamName} vs ${r.name} — battle ${battleIndex + 1} replay`);
     setReplayLines(null);
+    setReplayRawLog(null);
     setReplayError(null);
     setReplayLoading(true);
     try {
@@ -76,7 +79,10 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
         seed: current.meta.seed,
         matchupIndex,
         battleIndex,
+        p1Name: current.meta.teamName,
+        p2Name: r.name,
       });
+      setReplayRawLog(res.log);
       setReplayLines(formatReplayLog(res.log, current.meta.teamName, r.name));
     } catch (err: any) {
       setReplayError(String(err?.message || err));
@@ -87,6 +93,33 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
 
   const openReplay = (r: MatchupResult) => {
     void runReplay(r, 0);
+  };
+
+  /** Copy the raw standard-format battle log for use with replay converters. */
+  const copyReplayLog = async () => {
+    if (!replayRawLog) return;
+    try {
+      await navigator.clipboard.writeText(replayRawLog.join('\n'));
+      setReplayCopied(true);
+      window.setTimeout(() => setReplayCopied(false), 1500);
+    } catch {
+      setReplayError('Could not copy the log to the clipboard.');
+    }
+  };
+
+  /** Download the raw standard-format battle log as a .log file. */
+  const downloadReplayLog = () => {
+    if (!replayRawLog || !replayTitle) return;
+    const blob = new Blob([replayRawLog.join('\n') + '\n'], {type: 'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const slug = replayTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    a.href = url;
+    a.download = `battle-dome-${slug || 'replay'}.log`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   const replayTotalBattles = replayMatchup
@@ -328,10 +361,24 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                     </select>
                   </label>
                 )}
+                {replayRawLog && !replayLoading && (
+                  <>
+                    <button className="btn small ghost" onClick={() => void copyReplayLog()}>
+                      {replayCopied ? '✓ Copied' : '⧉ Copy log'}
+                    </button>
+                    <button className="btn small ghost" onClick={downloadReplayLog}>⬇ .log</button>
+                  </>
+                )}
                 <button className="btn small ghost" onClick={closeReplay}>✕ Close</button>
               </div>
             </div>
             <div className="modal-body">
+              {replayRawLog && !replayLoading && (
+                <p className="muted tiny" style={{margin: '0 0 8px'}}>
+                  Standard Showdown battle log — copy or download the .log and feed it to a
+                  replay converter to generate a visual replay.
+                </p>
+              )}
               {replayLoading && (
                 <div className="replay-loading">
                   <p className="muted">Re-simulating the battle…</p>

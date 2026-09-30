@@ -61,6 +61,9 @@ export interface ReplayRequest {
   matchupIndex: number;
   /** 0-based battle within the matchup; seed is derived per battle, so any index reproduces exactly */
   battleIndex: number;
+  /** Readable player names for the log's |player| and |win| lines (team names) */
+  p1Name: string;
+  p2Name: string;
 }
 
 export interface ReplayResult {
