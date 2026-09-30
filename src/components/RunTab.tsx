@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react';
 import type {RunConfig, SavedTeam} from '../lib/types';
 import {randomSeed} from '../lib/types';
-import {clampBattlesPerMatchup, fmtEta, summarize} from '../lib/run';
+import {clampBattlesPerMatchup, fmtElapsed, summarize} from '../lib/run';
 import type {RunState} from '../lib/useBenchmarkRun';
 import type {RefTeam} from '../sim/client';
 import SpriteStrip from './SpriteStrip';
@@ -40,7 +40,7 @@ export default function RunTab({
   const canStart = !running && selectedTeamId && selectedRefs.length > 0;
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
 
-  // Tick once a second while running so the ETA stays fresh.
+  // Tick once a second while running so the elapsed timer stays fresh.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!running) return;
@@ -65,10 +65,9 @@ export default function RunTab({
     : 0;
   const hasPartialResults = runState.results.length > 0 || inProgressBattles > 0;
   const [cancelDialog, setCancelDialog] = useState(false);
-  let etaText = '';
-  if (running && runState.startedAt && doneBattles > 0 && totalBattles > doneBattles) {
-    const elapsedSec = Math.max(1, (now - runState.startedAt) / 1000);
-    etaText = fmtEta((elapsedSec / doneBattles) * (totalBattles - doneBattles));
+  let elapsedText = '';
+  if (running && runState.startedAt) {
+    elapsedText = fmtElapsed((now - runState.startedAt) / 1000);
   }
 
   return (
@@ -179,7 +178,7 @@ export default function RunTab({
               <p className="muted">
                 {p.matchupName} — battle {p.battle}/{p.battlesPerMatchup} · matchup{' '}
                 {p.matchupIndex + 1}/{p.matchupsTotal} · {doneBattles}/{totalBattles} battles
-                {etaText && <> · {etaText}</>}
+                {elapsedText && <> · {elapsedText}</>}
               </p>
             </>
           )}

@@ -68,13 +68,13 @@ export function buildJob(
   };
 }
 
-export function fmtEta(totalSec: number): string {
+export function fmtElapsed(totalSec: number): string {
   if (!isFinite(totalSec) || totalSec < 0) return '';
   const s = Math.round(totalSec);
-  if (s < 60) return `≈ ${s}s left`;
+  if (s < 60) return `${s}s elapsed`;
   const m = Math.floor(s / 60);
-  if (m < 60) return `≈ ${m}m ${String(s % 60).padStart(2, '0')}s left`;
-  return `≈ ${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m left`;
+  if (m < 60) return `${m}m ${String(s % 60).padStart(2, '0')}s elapsed`;
+  return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m elapsed`;
 }
 
 export interface RefInfo {
