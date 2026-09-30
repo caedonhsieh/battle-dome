@@ -2,6 +2,7 @@ import {Fragment, useMemo, useState} from 'react';
 import type {MatchupResult} from '../sim/client';
 import type {RunMeta, RunRecord} from '../lib/types';
 import {summarize} from './RunTab';
+import SpriteStrip from './SpriteStrip';
 
 interface ViewData {
   meta: RunMeta;
@@ -14,6 +15,8 @@ interface Props {
   history: RunRecord[];
   onHistoryChange: (h: RunRecord[]) => void;
   onViewRecord: (r: RunRecord) => void;
+  /** paste lookup for reference-team sprite strips (undefined = no strip) */
+  getRefPaste: (refId: string) => string | undefined;
 }
 
 type SortKey = 'winrate' | 'name' | 'wins';
@@ -23,7 +26,7 @@ function winRate(r: MatchupResult): number {
   return total === 0 ? 0 : r.wins / total;
 }
 
-export default function ResultsTab({current, history, onHistoryChange, onViewRecord}: Props) {
+export default function ResultsTab({current, history, onHistoryChange, onViewRecord, getRefPaste}: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('winrate');
   const [sortDesc, setSortDesc] = useState(true);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -139,9 +142,13 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                       </tr>
                       {rows.map((r) => {
                         const t = r.wins + r.losses + r.draws;
+                        const paste = getRefPaste(r.refId);
                         return (
                           <tr key={r.refId}>
-                            <td>{r.name}</td>
+                            <td>
+                              {r.name}
+                              {paste && <SpriteStrip paste={paste} size={32} />}
+                            </td>
                             <td><span className={`badge arch-${r.archetype.replace(/\s/g, '')}`}>{r.archetype}</span></td>
                             <td className="num win-t">{r.wins}</td>
                             <td className="num loss-t">{r.losses}</td>

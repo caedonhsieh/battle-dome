@@ -1,7 +1,8 @@
 import {useState} from 'react';
-import {validateTeamExport, teamSpecies} from '../sim/bot';
+import {validateTeamExport} from '../sim/bot';
 import type {SavedTeam} from '../lib/types';
 import {uid} from '../lib/types';
+import SpriteStrip from './SpriteStrip';
 
 interface Props {
   teams: SavedTeam[];
@@ -16,8 +17,6 @@ export default function TeamsTab({teams, onChange, selectedTeamId, onSelect}: Pr
   const [validation, setValidation] = useState<{ok: boolean; problems: string[]} | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
-
-  const previewSpecies = paste.trim() ? teamSpecies(paste) : [];
 
   const handleSave = () => {
     const v = validateTeamExport(paste);
@@ -78,13 +77,7 @@ export default function TeamsTab({teams, onChange, selectedTeamId, onSelect}: Pr
             spellCheck={false}
           />
         </label>
-        {previewSpecies.length > 0 && (
-          <div className="species-chips">
-            {previewSpecies.map((s) => (
-              <span key={s} className="chip">{s}</span>
-            ))}
-          </div>
-        )}
+        {paste.trim() ? <SpriteStrip paste={paste} size={40} /> : null}
         {validation && !validation.ok && (
           <div className="alert error">
             <strong>Team didn't validate:</strong>
@@ -125,11 +118,7 @@ export default function TeamsTab({teams, onChange, selectedTeamId, onSelect}: Pr
               ) : (
                 <strong>{t.name}</strong>
               )}
-              <div className="species-chips small">
-                {teamSpecies(t.paste).map((s) => (
-                  <span key={s} className="chip">{s}</span>
-                ))}
-              </div>
+              <SpriteStrip paste={t.paste} size={40} />
               <div className="muted tiny">
                 Saved {new Date(t.createdAt).toLocaleDateString()}
               </div>

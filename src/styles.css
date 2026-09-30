@@ -294,3 +294,70 @@ a { color: var(--accent); }
   color: var(--muted);
   font-size: 0.8rem;
 }
+
+/* Sprite strips + set tooltips */
+.sprite-strip { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 4px; }
+.sprite-wrap { position: relative; }
+.sprite-btn {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sprite-btn:hover, .sprite-wrap.open .sprite-btn { border-color: var(--accent); }
+.sprite-btn img { display: block; pointer-events: none; }
+.sprite-btn img.pixelated { image-rendering: pixelated; }
+.sprite-fallback { font-size: 0.7rem; font-weight: 700; color: var(--muted); }
+
+.set-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 230px;
+  background: #222633;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  z-index: 60;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  text-align: left;
+  pointer-events: none;
+}
+.set-tip.tip-edge-l { left: 0; transform: none; }
+.set-tip.tip-edge-r { left: auto; right: 0; transform: none; }
+.set-tip-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.set-tip-head strong { font-size: 0.88rem; }
+.set-tip-row { margin: 2px 0; }
+.set-tip-row.muted { color: var(--muted); }
+.set-tip-row.tiny { font-size: 0.74rem; color: var(--muted); }
+.set-tip-moves { margin: 6px 0 0; padding: 0; list-style: none; }
+.set-tip-moves li { margin: 1px 0; }
+
+.tera-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  color: #0e1014;
+  background: #9aa3b5;
+  white-space: nowrap;
+}
+.tera-normal { background: #a8a77a; } .tera-fire { background: #ee8130; }
+.tera-water { background: #6390f0; } .tera-electric { background: #f7d02c; }
+.tera-grass { background: #7ac74c; } .tera-ice { background: #96d9d6; }
+.tera-fighting { background: #c22e28; color: #fff; } .tera-poison { background: #a33ea1; color: #fff; }
+.tera-ground { background: #e2bf65; } .tera-flying { background: #a98ff3; }
+.tera-psychic { background: #f95587; color: #fff; } .tera-bug { background: #a6b91a; }
+.tera-rock { background: #b6a136; } .tera-ghost { background: #735797; color: #fff; }
+.tera-dragon { background: #6f35fc; color: #fff; } .tera-dark { background: #705746; color: #fff; }
+.tera-steel { background: #b7b7ce; } .tera-fairy { background: #d685ad; }
+.tera-stellar { background: linear-gradient(135deg, #f7d02c, #ee8130, #a33ea1, #6390f0); }

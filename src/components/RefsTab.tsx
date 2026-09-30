@@ -1,8 +1,9 @@
 import {useMemo, useState} from 'react';
 import teamsData from '../data/reference-teams.json';
-import {validateTeamExport, teamSpecies} from '../sim/bot';
+import {validateTeamExport} from '../sim/bot';
 import type {BundledRef, CustomRef} from '../lib/types';
 import {uid, SMOGON_THREAD_URL, REFERENCE_SET_LABEL} from '../lib/types';
+import SpriteStrip from './SpriteStrip';
 
 const BUNDLED: BundledRef[] = (teamsData as any).teams;
 const ARCHETYPES = ['Offense', 'Bulky Offense', 'Balance', 'Stall'];
@@ -104,11 +105,7 @@ export default function RefsTab({selectedRefIds, onSelectionChange, customRefs, 
             <div className="grow">
               <strong>{t.name}</strong>{' '}
               <span className={`badge arch-${t.archetype.replace(/\s/g, '')}`}>{t.archetype}</span>
-              <div className="species-chips small">
-                {teamSpecies(t.paste).map((s) => (
-                  <span key={s} className="chip">{s}</span>
-                ))}
-              </div>
+              <SpriteStrip paste={t.paste} size={40} />
               <div className="muted tiny">
                 by {t.author} ·{' '}
                 <a href={t.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
@@ -158,11 +155,7 @@ export default function RefsTab({selectedRefIds, onSelectionChange, customRefs, 
               <strong>{r.name}</strong>{' '}
               <span className={`badge arch-${r.archetype.replace(/\s/g, '')}`}>{r.archetype}</span>
               <span className="badge">custom</span>
-              <div className="species-chips small">
-                {teamSpecies(r.paste).map((s) => (
-                  <span key={s} className="chip">{s}</span>
-                ))}
-              </div>
+              <SpriteStrip paste={r.paste} size={40} />
             </div>
             <div className="actions">
               <button className="btn small danger" onClick={() => handleDeleteCustom(r.id)}>

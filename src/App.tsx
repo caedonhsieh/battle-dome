@@ -59,6 +59,11 @@ export default function App() {
     [allRefs, selectedRefIds],
   );
 
+  const refPasteById = useMemo(
+    () => new Map(allRefs.map((r) => [r.id, r.paste] as const)),
+    [allRefs],
+  );
+
   const setSelectedTeamId = useCallback(
     (id: string | null) => setSelection((s) => ({...s, teamId: id})),
     [],
@@ -169,6 +174,7 @@ export default function App() {
             history={history}
             onHistoryChange={setHistory}
             onViewRecord={viewRecord}
+            getRefPaste={(id) => refPasteById.get(id)}
           />
         )}
         {tab === 'about' && <AboutTab />}

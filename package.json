@@ -14,6 +14,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@pkmn/img": "^0.3.4",
     "@pkmn/sim": "^0.10.11",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

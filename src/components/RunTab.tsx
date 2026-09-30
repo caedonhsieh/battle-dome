@@ -2,6 +2,7 @@ import type {RunConfig, RunMeta, SavedTeam} from '../lib/types';
 import {randomSeed} from '../lib/types';
 import type {RunState} from '../lib/useBenchmarkRun';
 import type {MatchupResult, RefTeam} from '../sim/client';
+import SpriteStrip from './SpriteStrip';
 
 interface Props {
   teams: SavedTeam[];
@@ -66,6 +67,7 @@ export default function RunTab({
   const doneBattles = p ? p.matchupsDone * p.battlesPerMatchup + p.battle : 0;
   const pct = totalBattles > 0 ? Math.min(100, (doneBattles / totalBattles) * 100) : 0;
   const canStart = !running && selectedTeamId && selectedRefs.length > 0;
+  const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
 
   return (
     <div className="panel">
@@ -126,6 +128,7 @@ export default function RunTab({
           {selectedRefs.length} reference team{selectedRefs.length === 1 ? '' : 's'} selected →{' '}
           {totalBattles} total battles.
         </p>
+        {selectedTeam && <SpriteStrip paste={selectedTeam.paste} size={40} />}
         {!running ? (
           <button className="btn primary large" onClick={onStart} disabled={!canStart}>
             ▶ Start benchmark
