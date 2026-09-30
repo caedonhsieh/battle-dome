@@ -1,6 +1,6 @@
-import {useMemo, useState} from 'react';
+import {useMemo, useState, type CSSProperties} from 'react';
 import {Teams} from '@pkmn/sim';
-import {Sprites} from '@pkmn/img';
+import {Icons} from '@pkmn/img';
 
 export interface SetSummary {
   species: string;
@@ -10,8 +10,8 @@ export interface SetSummary {
   evs: string;
   teraType: string;
   moves: string[];
-  spriteUrl: string | null;
-  pixelated: boolean;
+  /** sprite-sheet CSS for the 40x30 pixel-art menu icon, or null for the initials fallback */
+  iconCss: CSSProperties | null;
 }
 
 const STAT_NAMES: [string, string][] = [
@@ -41,12 +41,9 @@ export function parseSets(paste: string): SetSummary[] {
     return [];
   }
   return team.map((set) => {
-    let spriteUrl: string | null = null;
-    let pixelated = false;
+    let iconCss: CSSProperties | null = null;
     try {
-      const s = Sprites.getPokemon(set.species);
-      spriteUrl = s.url;
-      pixelated = !!s.pixelated;
+      iconCss = Icons.getPokemon(set.species).css as CSSProperties;
     } catch {
       /* fall through to initials fallback */
     }
@@ -58,8 +55,7 @@ export function parseSets(paste: string): SetSummary[] {
       evs: formatEvs(set.evs),
       teraType: set.teraType || (set as any).tera_type || '',
       moves: (set.moves || []).filter(Boolean),
-      spriteUrl,
-      pixelated,
+      iconCss,
     };
   });
 }
@@ -71,14 +67,13 @@ function initials(species: string): string {
 
 interface Props {
   paste: string;
-  /** sprite box size in px */
+  /** minimum sprite button size in px (icons render at native 40x30) */
   size?: number;
 }
 
-export default function SpriteStrip({paste, size = 44}: Props) {
+export default function SpriteStrip({paste, size = 40}: Props) {
   const sets = useMemo(() => parseSets(paste), [paste]);
   const [open, setOpen] = useState<number | null>(null);
-  const [failed, setFailed] = useState<Record<number, boolean>>({});
 
   if (sets.length === 0) return null;
 
@@ -96,24 +91,15 @@ export default function SpriteStrip({paste, size = 44}: Props) {
             <button
               type="button"
               className="sprite-btn"
-              style={{width: size, height: size}}
+              style={{minWidth: size, minHeight: 34}}
               onClick={() => setOpen(open === i ? null : i)}
               onFocus={() => setOpen(i)}
               onBlur={() => setOpen(null)}
               aria-label={s.species}
               title={s.species}
             >
-              {s.spriteUrl && !failed[i] ? (
-                <img
-                  src={s.spriteUrl}
-                  alt={s.species}
-                  width={size}
-                  height={size}
-                  loading="lazy"
-                  draggable={false}
-                  className={s.pixelated ? 'pixelated' : undefined}
-                  onError={() => setFailed((f) => ({...f, [i]: true}))}
-                />
+              {s.iconCss ? (
+                <span className="mini-icon" style={s.iconCss} aria-hidden="true" />
               ) : (
                 <span className="sprite-fallback">{initials(s.species)}</span>
               )}
