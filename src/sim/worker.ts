@@ -2,11 +2,11 @@
  * Web Worker entry: runs matchups off the main thread, both sides piloted by
  * the Metamon Kadabra3 model (onnxruntime-web, WebGPU with WASM fallback).
  *
- * The model (~95MB) is downloaded once from the public GitHub release and
- * cached in IndexedDB; progress is reported to the UI.
+ * The model (~95MB) is downloaded once, same-origin from the gh-pages branch,
+ * and cached in IndexedDB; progress is reported to the UI.
  */
 import * as ort from 'onnxruntime-web';
-import {loadMetamonSession} from './metamon/model';
+import {loadMetamonSession, type MetamonProvider} from './metamon/model';
 import {runBattleMetamon, CancelledError, type MetamonRunner} from './metamon/runner';
 
 export interface RefTeam {
@@ -34,6 +34,7 @@ export interface MatchupResult {
 
 type Out =
   | {type: 'model-progress'; fraction: number; stage: 'cached' | 'downloading' | 'loading'}
+  | {type: 'provider'; provider: MetamonProvider}
   | {type: 'progress'; matchupIndex: number; matchupName: string; battle: number; battlesPerMatchup: number; matchupsDone: number; matchupsTotal: number}
   | {type: 'matchup'; index: number; result: MatchupResult}
   | {type: 'done'; results: MatchupResult[]}
@@ -42,6 +43,7 @@ type Out =
 
 let cancelled = false;
 let cachedSession: ort.InferenceSession | null = null;
+let cachedProvider: MetamonProvider | null = null;
 
 const w = self as unknown as {
   onmessage: ((e: MessageEvent) => void) | null;
@@ -62,10 +64,13 @@ w.onmessage = (e: MessageEvent) => {
   void (async () => {
     try {
       if (!cachedSession) {
-        cachedSession = await loadMetamonSession((fraction, stage) =>
+        const loaded = await loadMetamonSession((fraction, stage) =>
           post({type: 'model-progress', fraction, stage}),
         );
+        cachedSession = loaded.session;
+        cachedProvider = loaded.provider;
       }
+      post({type: 'provider', provider: cachedProvider!});
       if (cancelled) {
         post({type: 'cancelled'});
         return;
@@ -119,6 +124,7 @@ w.onmessage = (e: MessageEvent) => {
       } else {
         // A failed session is not reusable.
         cachedSession = null;
+        cachedProvider = null;
         post({type: 'error', message: String(err?.message || err)});
       }
     }

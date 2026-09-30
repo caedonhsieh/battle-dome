@@ -91,7 +91,11 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
           <div className="card">
             <h3>
               {current.meta.teamName}{' '}
-              <span className="badge">{current.meta.engine === 'metamon-kadabra3' ? 'Metamon' : 'Heuristic'}</span>{' '}
+              <span className="badge">
+                {current.meta.engine === 'metamon-kadabra3'
+                  ? `Metamon${current.meta.provider ? ` · ${current.meta.provider === 'webgpu' ? 'WebGPU' : 'WASM'}` : ''}`
+                  : 'Heuristic'}
+              </span>{' '}
               <span className="muted tiny">
                 · {current.meta.battlesPerMatchup} battles/matchup · seed “{current.meta.seed}” ·{' '}
                 {new Date(current.meta.date).toLocaleString()}
@@ -197,7 +201,9 @@ export default function ResultsTab({current, history, onHistoryChange, onViewRec
                   {t.wins}W / {t.losses}L / {t.draws}D
                   {total > 0 && ` (${Math.round((t.wins / total) * 100)}%)`} ·{' '}
                   {h.meta.battlesPerMatchup}/matchup · seed “{h.meta.seed}” ·{' '}
-                  {h.meta.engine === 'metamon-kadabra3' ? 'Metamon' : 'heuristic'}
+                  {h.meta.engine === 'metamon-kadabra3'
+                    ? `Metamon${h.meta.provider ? ` · ${h.meta.provider === 'webgpu' ? 'WebGPU' : 'WASM'}` : ''}`
+                    : 'heuristic'}
                 </div>
               </div>
               <div className="actions">

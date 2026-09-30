@@ -152,7 +152,10 @@ export default function RunTab({
         <div className="card">
           <h3>{running ? 'Running…' : 'Run failed'}</h3>
           <p className="muted tiny">
-            <span className="badge">Metamon Kadabra3</span> piloting both sides
+            <span className="badge">
+              Metamon Kadabra3{runState.provider ? ` · ${runState.provider === 'webgpu' ? 'WebGPU' : 'WASM'}` : ''}
+            </span>{' '}
+            piloting both sides
           </p>
           {running && mp && (
             <>

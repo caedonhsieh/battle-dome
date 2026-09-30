@@ -1,4 +1,5 @@
 import type {MatchupResult, RunJob} from './worker';
+import type {MetamonProvider} from './metamon/model';
 
 export type {MatchupResult, RefTeam, RunJob} from './worker';
 
@@ -22,6 +23,7 @@ export interface ModelProgressMsg {
 
 export interface RunCallbacks {
   onModelProgress: (p: ModelProgressMsg) => void;
+  onProvider: (provider: MetamonProvider) => void;
   onProgress: (p: ProgressMsg) => void;
   onMatchup: (index: number, result: MatchupResult) => void;
   onDone: (results: MatchupResult[]) => void;
@@ -35,6 +37,7 @@ export function startRun(worker: Worker, job: RunJob, cb: RunCallbacks): () => v
     const m = e.data as any;
     switch (m.type) {
       case 'model-progress': cb.onModelProgress(m); break;
+      case 'provider': cb.onProvider(m.provider); break;
       case 'progress': cb.onProgress(m); break;
       case 'matchup': cb.onMatchup(m.index, m.result); break;
       case 'done': cb.onDone(m.results); break;

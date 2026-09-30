@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {createBenchmarkWorker, startRun, type MatchupResult, type ModelProgressMsg, type ProgressMsg, type RunJob} from '../sim/client';
+import type {MetamonProvider} from '../sim/metamon/model';
 
 export type RunStatus = 'idle' | 'running' | 'done' | 'error' | 'cancelled';
 
@@ -7,6 +8,8 @@ export interface RunState {
   status: RunStatus;
   progress: ProgressMsg | null;
   modelProgress: ModelProgressMsg | null;
+  /** Which ONNX execution provider the worker initialized (null until known). */
+  provider: MetamonProvider | null;
   results: MatchupResult[];
   error: string | null;
 }
@@ -22,6 +25,7 @@ export function useBenchmarkRun() {
     status: 'idle',
     progress: null,
     modelProgress: null,
+    provider: null,
     results: [],
     error: null,
   });
@@ -41,10 +45,12 @@ export function useBenchmarkRun() {
       stopWorker();
       const worker = createBenchmarkWorker();
       workerRef.current = worker;
-      setState({status: 'running', progress: null, modelProgress: null, results: [], error: null});
+      setState({status: 'running', progress: null, modelProgress: null, provider: null, results: [], error: null});
       const cancel = startRun(worker, job, {
         onModelProgress: (modelProgress) =>
           setState((s) => ({...s, modelProgress})),
+        onProvider: (provider) =>
+          setState((s) => ({...s, provider})),
         onProgress: (progress) =>
           setState((s) => ({...s, progress, modelProgress: null})),
         onMatchup: (_index, result) =>
@@ -73,7 +79,7 @@ export function useBenchmarkRun() {
 
   const reset = useCallback(() => {
     stopWorker();
-    setState({status: 'idle', progress: null, modelProgress: null, results: [], error: null});
+    setState({status: 'idle', progress: null, modelProgress: null, provider: null, results: [], error: null});
   }, [stopWorker]);
 
   return {state, start, cancel, reset, running: state.status === 'running'};

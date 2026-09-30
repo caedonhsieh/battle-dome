@@ -37,6 +37,8 @@ export interface RunMeta {
   date: number;
   /** Pilot that played both sides. Absent on runs from before engine tracking (heuristic). */
   engine?: 'heuristic' | 'metamon-kadabra3';
+  /** ONNX execution provider that ran the Metamon pilot. Absent before provider tracking. */
+  provider?: 'webgpu' | 'wasm';
 }
 
 export interface RunRecord {

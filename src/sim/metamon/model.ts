@@ -121,11 +121,19 @@ async function warmup(session: ort.InferenceSession): Promise<void> {
   if (!logits) throw new Error('warmup: no logits output');
 }
 
+export type MetamonProvider = 'webgpu' | 'wasm';
+
+export interface MetamonSession {
+  session: ort.InferenceSession;
+  /** Which execution provider actually initialized — surfaced in the UI. */
+  provider: MetamonProvider;
+}
+
 /**
  * Load (or reuse the cached) Kadabra3 session. WebGPU first with a warmup
  * probe; falls back to WASM on any failure.
  */
-export async function loadMetamonSession(onProgress: ProgressFn): Promise<ort.InferenceSession> {
+export async function loadMetamonSession(onProgress: ProgressFn): Promise<MetamonSession> {
   configureOrt();
   let buf = await idbGet(MODEL_VERSION).catch(() => null);
   if (buf) {
@@ -140,11 +148,11 @@ export async function loadMetamonSession(onProgress: ProgressFn): Promise<ort.In
   try {
     const gpu = await ort.InferenceSession.create(buf, {executionProviders: ['webgpu']});
     await warmup(gpu);
-    return gpu;
+    return {session: gpu, provider: 'webgpu'};
   } catch {
     // WebGPU unavailable or rejected the graph — WASM fallback.
     const wasm = await ort.InferenceSession.create(buf, {executionProviders: ['wasm']});
     await warmup(wasm);
-    return wasm;
+    return {session: wasm, provider: 'wasm'};
   }
 }

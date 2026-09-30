@@ -87,6 +87,7 @@ export default function App() {
     if (run.state.status === 'done' && metaRef.current && !savedRunRef.current) {
       savedRunRef.current = true;
       const meta = metaRef.current;
+      if (run.state.provider) meta.provider = run.state.provider;
       const record: RunRecord = {
         id: uid(),
         name: `${meta.teamName} — ${new Date(meta.date).toLocaleDateString()} ${new Date(meta.date).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`,
