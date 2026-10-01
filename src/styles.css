@@ -162,6 +162,43 @@ body {
   flex: 1;
 }
 
+/* ---------- Body row: content + docked start-menu panel ---------- */
+.body-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 20px;
+  flex: 1;
+}
+.body-row .main {
+  max-width: none;
+  margin: 0;
+  padding-left: 0;
+  padding-right: 0;
+  min-width: 0;
+}
+.side-menu {
+  width: 232px;
+  flex: none;
+  position: sticky;
+  top: 112px;
+  padding: 24px 0 60px;
+}
+.startmenu-docked {
+  position: static;
+  width: 100%;
+}
+@media (max-width: 900px) {
+  .side-menu { display: none; }
+}
+@media (min-width: 901px) {
+  .startmenu-wrap { display: none; }
+  .header-inner { max-width: 1240px; }
+}
+
 .panel h2 {
   margin: 0 0 12px;
   font-family: var(--font-title);

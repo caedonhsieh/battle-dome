@@ -177,6 +177,22 @@ export default function App() {
     setTab('results');
   }, []);
 
+  const menuItems = TABS.map(([id, label]) => (
+    <button
+      key={id}
+      role="menuitem"
+      className={`startmenu-item ${tab === id ? 'active' : ''}`}
+      onClick={() => {
+        setTab(id);
+        setMenuOpen(false);
+      }}
+    >
+      <span className="sm-cursor">{tab === id ? '▶' : ''}</span>
+      {label}
+      {id === 'run' && run.running && <span className="dot" />}
+    </button>
+  ));
+
   return (
     <div className="app">
       <header className="site-header">
@@ -200,21 +216,7 @@ export default function App() {
           </button>
           {menuOpen && (
             <div className="startmenu" role="menu">
-              {TABS.map(([id, label]) => (
-                <button
-                  key={id}
-                  role="menuitem"
-                  className={`startmenu-item ${tab === id ? 'active' : ''}`}
-                  onClick={() => {
-                    setTab(id);
-                    setMenuOpen(false);
-                  }}
-                >
-                  <span className="sm-cursor">{tab === id ? '▶' : ''}</span>
-                  {label}
-                  {id === 'run' && run.running && <span className="dot" />}
-                </button>
-              ))}
+              {menuItems}
             </div>
           )}
         </nav>
@@ -222,6 +224,7 @@ export default function App() {
         </div>
       </header>
 
+      <div className="body-row">
       <main className="main">
         {tab === 'teams' && (
           <TeamsTab
@@ -268,6 +271,12 @@ export default function App() {
         )}
         {tab === 'about' && <AboutTab />}
       </main>
+        <aside className="side-menu">
+          <div className="startmenu startmenu-docked" role="menu">
+            {menuItems}
+          </div>
+        </aside>
+      </div>
 
       <footer className="site-footer">
         <span>
