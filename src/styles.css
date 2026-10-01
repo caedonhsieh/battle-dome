@@ -74,46 +74,82 @@ body {
   font-size: 1.05rem;
 }
 
-.tabs {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 4px 20px 0;
+.header-right {
   display: flex;
-  gap: 4px;
-  overflow-x: auto;
+  align-items: center;
+  gap: 10px;
 }
 
-.tab {
-  background: transparent;
-  border: none;
-  border-bottom: 4px solid transparent;
-  color: #aeb9d4;
-  padding: 8px 14px 10px;
+/* ---------- Start menu nav (in-game START menu) ---------- */
+.startmenu-wrap { position: relative; }
+.startmenu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--blue-dark);
+  border: 3px solid #14142a;
+  box-shadow: inset 0 0 0 2px #6a6a9c;
+  color: #ffffff;
+  padding: 10px 16px;
   font-family: var(--font-ui);
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   letter-spacing: 1px;
   cursor: pointer;
   white-space: nowrap;
 }
-.tab:hover { color: #ffffff; }
-.tab.active {
-  color: #ffffff;
-  border-bottom-color: var(--red);
-  background: rgba(255, 255, 255, 0.08);
+.startmenu-trigger:hover { background: #23234a; }
+.startmenu-trigger .sm-cursor { color: var(--gold); font-size: 1rem; }
+.startmenu-trigger .dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #7cfc90;
+  animation: pulse 1s infinite;
 }
-.tab.active::before {
-  content: "▶ ";
-  color: var(--red);
-  font-size: 1rem;
+.startmenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  min-width: 200px;
+  background: #f8f8f0;
+  border: 4px solid #2b2b44;
+  box-shadow:
+    inset 0 0 0 2px #f8f8f0,
+    inset 0 0 0 4px #9a9ac0,
+    6px 6px 0 rgba(0, 0, 0, 0.35);
+  padding: 10px 8px;
+  z-index: 60;
 }
-.tab .dot {
+.startmenu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  font-family: var(--font-ui);
+  font-size: 1.05rem;
+  letter-spacing: 1px;
+  color: #4a4a62;
+  padding: 8px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.startmenu-item:hover { background: #e6e6d2; }
+.startmenu-item.active { color: #1c1c34; }
+.startmenu-item .sm-cursor {
+  width: 1.4em;
+  flex: none;
+  color: #2b2b44;
+  font-size: 0.95em;
+}
+.startmenu-item .dot {
   display: inline-block;
   width: 10px; height: 10px;
   border-radius: 50%;
   background: #7cfc90;
   margin-left: 8px;
   animation: pulse 1s infinite;
-  vertical-align: middle;
 }
 @keyframes pulse { 50% { opacity: 0.35; } }
 
@@ -655,7 +691,7 @@ a { color: var(--blue-deep); }
   .card.row.selected::before { display: none; }
   .header-inner { flex-wrap: wrap; }
   .results-table { display: block; overflow-x: auto; }
-  .tab { font-size: 1.15rem; padding: 8px 10px 10px; }
+  .startmenu-trigger { font-size: 1.1rem; padding: 8px 12px; }
   .modal-head { flex-wrap: wrap; }
 }
 

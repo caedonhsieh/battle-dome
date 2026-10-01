@@ -16,8 +16,35 @@ const BUNDLED: BundledRef[] = (teamsData as any).teams;
 
 type Tab = 'teams' | 'refs' | 'run' | 'results' | 'about';
 
+const TABS: [Tab, string][] = [
+  ['run', 'RUN'],
+  ['teams', 'PARTY'],
+  ['refs', 'FOES'],
+  ['results', 'FILES'],
+  ['about', 'GUIDE'],
+];
+
 export default function App() {
   const [tab, setTab] = useState<Tab>('teams');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLElement | null>(null);
+
+  // Close the start menu on Escape or an outside click.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    const onPointer = (e: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointer);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer);
+    };
+  }, [menuOpen]);
   const [teams, setTeams] = useState<SavedTeam[]>(() => store.getTeams());
   const [customRefs, setCustomRefs] = useState<CustomRef[]>(() => store.getCustomRefs());
   const [config, setConfig] = useState<RunConfig>(() => store.getConfig());
@@ -158,28 +185,41 @@ export default function App() {
             <h1 className="logo">★ DOME OS ★</h1>
             <p className="tagline">Battle Dome · Data-driven OU Matchup Evaluation</p>
           </div>
-          <span className="badge format">{FORMAT_LABEL}</span>
-        </div>
-        <nav className="tabs">
-          {(
-            [
-              ['run', 'RUN'],
-              ['teams', 'PARTY'],
-              ['refs', 'FOES'],
-              ['results', 'FILES'],
-              ['about', 'GUIDE'],
-            ] as [Tab, string][]
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              className={`tab ${tab === id ? 'active' : ''}`}
-              onClick={() => setTab(id)}
-            >
-              {label}
-              {id === 'run' && run.running && <span className="dot" />}
-            </button>
-          ))}
+          <div className="header-right">
+            <span className="badge format">{FORMAT_LABEL}</span>
+            <nav className="startmenu-wrap" ref={menuRef}>
+          <button
+            className="startmenu-trigger"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+          >
+            <span className="sm-cursor">▶</span>
+            {TABS.find(([id]) => id === tab)?.[1]}
+            {run.running && <span className="dot" />}
+          </button>
+          {menuOpen && (
+            <div className="startmenu" role="menu">
+              {TABS.map(([id, label]) => (
+                <button
+                  key={id}
+                  role="menuitem"
+                  className={`startmenu-item ${tab === id ? 'active' : ''}`}
+                  onClick={() => {
+                    setTab(id);
+                    setMenuOpen(false);
+                  }}
+                >
+                  <span className="sm-cursor">{tab === id ? '▶' : ''}</span>
+                  {label}
+                  {id === 'run' && run.running && <span className="dot" />}
+                </button>
+              ))}
+            </div>
+          )}
         </nav>
+          </div>
+        </div>
       </header>
 
       <main className="main">
