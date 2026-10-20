@@ -3,7 +3,7 @@ import teamsData from '../data/reference-teams.json';
 import {validateTeamExport} from '../sim/bot';
 import type {BundledRef, CustomRef} from '../lib/types';
 import {uid, SMOGON_THREAD_URL, REFERENCE_SET_LABEL} from '../lib/types';
-import {parseSets, speciesInitials} from './SpriteStrip';
+import SpriteStrip, {parseSets} from './SpriteStrip';
 
 const BUNDLED: BundledRef[] = (teamsData as any).teams;
 const ARCHETYPES = ['Offense', 'Bulky Offense', 'Balance', 'Stall'];
@@ -43,40 +43,30 @@ export default function RefsTab({selectedRefIds, onSelectionChange, customRefs, 
     sub: React.ReactNode,
     extraActions?: React.ReactNode,
   ) {
-    const sets = parseSets(paste).slice(0, 6);
     const sel = selectedRefIds.includes(id);
     return (
-      <label key={id} className={`foe-box ${sel ? 'selected' : ''}`}>
-        <input
-          type="checkbox"
-          className="preview-check"
-          checked={sel}
-          onChange={() => toggle(id)}
-        />
-        <span className="foe-cursor" aria-hidden="true">{sel ? '▶' : '▷'}</span>
-        <span className="foe-main">
-          <span className="foe-name-row">
-            <span className="foe-name">{name}</span>
-            <span className={`badge arch-${archetype.replace(/\s/g, '')}`}>{archetype}</span>
-            {extraActions}
-          </span>
-          <span className="foe-sub">{sub}</span>
-          <span className="foe-sprites" aria-hidden="true">
-            {sets.map((s, i) => (
-              <span key={i} className="foe-slot" title={s.species}>
-                {s.iconCss ? (
-                  <span className="mini-icon" style={s.iconCss} />
-                ) : (
-                  <span className="sprite-fallback">{speciesInitials(s.species)}</span>
-                )}
+      <div key={id} className={`foe-box ${sel ? 'selected' : ''}`}>
+        <div className="foe-head">
+          <label className="foe-toggle">
+            <input
+              type="checkbox"
+              className="preview-check"
+              checked={sel}
+              onChange={() => toggle(id)}
+            />
+            <span className="foe-cursor" aria-hidden="true">{sel ? '▶' : '▷'}</span>
+            <span className="foe-heading">
+              <span className="foe-name-row">
+                <span className="foe-name">{name}</span>
+                <span className={`badge arch-${archetype.replace(/\s/g, '')}`}>{archetype}</span>
               </span>
-            ))}
-          </span>
-          <span className="hp-bar target-meter" aria-hidden="true">
-            <span className="hp-fill" style={{width: sel ? '100%' : '0%'}} />
-          </span>
-        </span>
-      </label>
+              <span className="foe-sub">{sub}</span>
+            </span>
+          </label>
+          {extraActions}
+        </div>
+        <SpriteStrip paste={paste} size={40} />
+      </div>
     );
   }
 

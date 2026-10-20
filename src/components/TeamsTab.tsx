@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {validateTeamExport} from '../sim/bot';
 import type {SavedTeam} from '../lib/types';
 import {uid} from '../lib/types';
-import SpriteStrip, {parseSets, speciesInitials} from './SpriteStrip';
+import SpriteStrip from './SpriteStrip';
 
 interface Props {
   teams: SavedTeam[];
@@ -93,89 +93,54 @@ export default function TeamsTab({teams, onChange, selectedTeamId, onSelect}: Pr
       {teams.length === 0 && <p className="muted">No party yet — import one above.</p>}
       <div className="party-list">
         {teams.map((t) => {
-          const sets = parseSets(t.paste).slice(0, 6);
-          const [lead, ...rest] = sets;
           const active = selectedTeamId === t.id;
           return (
-            <div key={t.id} className={`party-screen ${active ? 'active' : ''}`}>
-              <div className="party-title-row">
-                {renamingId === t.id ? (
-                  <span className="inline-form">
-                    <input
-                      type="text"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      maxLength={60}
-                      autoFocus
-                    />
-                    <button className="btn small" onClick={() => handleRename(t.id)}>Save</button>
-                    <button className="btn small ghost" onClick={() => setRenamingId(null)}>Cancel</button>
+            <div key={t.id} className={`card row team-row ${active ? 'selected' : ''}`}>
+              <div className="grow team-row-main">
+                <div className="team-row-head">
+                  {renamingId === t.id ? (
+                    <span className="inline-form">
+                      <input
+                        type="text"
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        maxLength={60}
+                        autoFocus
+                      />
+                      <button className="btn small" onClick={() => handleRename(t.id)}>Save</button>
+                      <button className="btn small ghost" onClick={() => setRenamingId(null)}>Cancel</button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="team-select"
+                      onClick={() => onSelect(t.id)}
+                      aria-pressed={active}
+                      title="Choose this party for the next run"
+                    >
+                      <span className="team-name">{t.name}</span>
+                      {active && <span className="badge selected-badge">SELECTED</span>}
+                    </button>
+                  )}
+                  <span className="muted tiny">
+                    Saved {new Date(t.createdAt).toLocaleDateString()}
                   </span>
-                ) : (
-                  <button
-                    type="button"
-                    className="party-select"
-                    onClick={() => onSelect(t.id)}
-                    aria-pressed={active}
-                    title="Choose this party for the next run"
-                  >
-                    <span className="party-cursor" aria-hidden="true">{active ? '▶' : '▷'}</span>
-                    <span className="party-title">{t.name}</span>
-                  </button>
-                )}
-                <div className="actions">
-                  <button
-                    className="btn small ghost"
-                    onClick={() => {
-                      setRenamingId(t.id);
-                      setRenameValue(t.name);
-                    }}
-                  >
-                    Rename
-                  </button>
-                  <button className="btn small danger" onClick={() => handleDelete(t.id)}>
-                    Release
-                  </button>
                 </div>
+                <SpriteStrip paste={t.paste} size={40} />
               </div>
-              <div className="party-body">
-                {lead && (
-                  <div className={`party-lead ${active ? 'active' : ''}`}>
-                    {lead.iconCss ? (
-                      <span className="mini-icon lead-sprite" style={lead.iconCss} aria-hidden="true" />
-                    ) : (
-                      <span className="sprite-fallback">{speciesInitials(lead.species)}</span>
-                    )}
-                    <div className="party-lead-name">{lead.species}</div>
-                    <div className="party-lead-lv">Lv{lead.level}</div>
-                    <div className="hp-bar" aria-hidden="true"><span className="hp-fill" /></div>
-                  </div>
-                )}
-                <div className="party-bars">
-                  {rest.map((s, i) => (
-                    <div key={i} className="party-bar">
-                      <span className="party-ball" aria-hidden="true">
-                        {s.iconCss ? (
-                          <span className="mini-icon" style={s.iconCss} />
-                        ) : (
-                          <span className="sprite-fallback">{speciesInitials(s.species)}</span>
-                        )}
-                      </span>
-                      <span className="party-bar-main">
-                        <span className="party-bar-name">{s.species}</span>
-                        <span className="hp-bar small" aria-hidden="true"><span className="hp-fill" /></span>
-                      </span>
-                      <span className="party-bar-side">
-                        <span className="party-bar-lv">Lv{s.level}</span>
-                        {s.item && <span className="party-bar-item">@ {s.item}</span>}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="party-msgbox">Choose a party for the next run.</div>
-              <div className="muted tiny party-foot">
-                Saved {new Date(t.createdAt).toLocaleDateString()}
+              <div className="actions">
+                <button
+                  className="btn small ghost"
+                  onClick={() => {
+                    setRenamingId(t.id);
+                    setRenameValue(t.name);
+                  }}
+                >
+                  Rename
+                </button>
+                <button className="btn small danger" onClick={() => handleDelete(t.id)}>
+                  Release
+                </button>
               </div>
             </div>
           );

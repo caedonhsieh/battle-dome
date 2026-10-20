@@ -733,92 +733,48 @@ a { color: var(--blue-deep); }
 }
 
 /* ============================================================
-   PARTY tab — Emerald party screen ("Choose a POKéMON.")
+   PARTY tab — compact saved-party rows
    ============================================================ */
-.party-list { display: flex; flex-direction: column; gap: 16px; }
-.party-screen {
-  background:
-    repeating-linear-gradient(0deg, rgba(90,80,20,.10) 0 2px, transparent 2px 6px),
-    linear-gradient(180deg, #bcbd72 0%, #a8a962 60%, #99995a 100%);
-  border: 3px solid #222;
-  border-radius: 10px;
-  box-shadow: inset 0 0 0 2px #d8d890, 0 3px 0 rgba(0,0,0,.4);
-  padding: 10px 12px 12px;
-  color: #222;
+.party-list { display: flex; flex-direction: column; gap: 10px; }
+.team-row { margin-bottom: 0; align-items: center; }
+.team-row-main { display: flex; flex-direction: column; }
+.team-row-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: 32px;
 }
-.party-screen.active {
-  border-color: #f09030;
-  box-shadow: inset 0 0 0 2px #d8d890, 0 0 16px rgba(240,144,48,.65);
+.team-select {
+  background: none;
+  border: none;
+  padding: 3px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--navy-deep);
+  text-align: left;
 }
-.party-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-.party-select {
-  background: none; border: none; padding: 4px 6px; cursor: pointer;
-  display: flex; align-items: center; gap: 10px; color: #222;
+.team-select:hover .team-name { color: var(--red); }
+.team-name {
+  font-family: var(--font-title);
+  font-size: 0.82rem;
+  letter-spacing: 0.5px;
 }
-.party-cursor { color: #222; font-size: 18px; }
-.party-screen.active .party-cursor { color: #c33; animation: dome-blink 1.1s steps(2, start) infinite; }
+.selected-badge {
+  background: #ffe1dc;
+  border-color: var(--red);
+  color: #8f1d12;
+}
+.team-row .sprite-strip { margin-top: 2px; }
 @keyframes dome-blink { 50% { opacity: 0; } }
-.party-title { font-family: var(--font-title); font-size: 15px; color: #222; letter-spacing: .5px; }
-.party-screen .actions { display: flex; gap: 8px; }
-.party-body { display: flex; gap: 10px; align-items: stretch; }
-.party-lead {
-  flex: 0 0 168px;
-  background: #bfe0f2;
-  border: 3px solid #222;
-  border-radius: 10px;
-  box-shadow: inset 0 0 0 2px #eef8ff;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 10px 6px; gap: 2px;
-  min-height: 190px;
-}
-.party-lead.active { border-color: #f09030; }
-.lead-sprite { display: inline-block; transform: scale(2); margin: 18px 0; }
-.party-lead-name { font-size: 22px; color: #222; line-height: 1; }
-.party-lead-lv { font-size: 18px; color: #444; }
-.party-bars { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.party-bar {
-  display: flex; align-items: center; gap: 8px;
-  background: linear-gradient(180deg, #4a7de0 0%, #3563c8 55%, #2a50a8 100%);
-  border: 2px solid #1a1a2e;
-  border-radius: 8px;
-  box-shadow: inset 0 2px 0 rgba(255,255,255,.25);
-  padding: 4px 10px 4px 6px;
-  color: #fff;
-  min-width: 0;
-}
-.party-ball {
-  flex: 0 0 44px; width: 44px; height: 44px;
-  background: #fff; border: 2px solid #1a1a2e; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; overflow: hidden;
-}
-.party-bar-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.party-bar-name { font-size: 20px; color: #fff; text-shadow: 1px 1px 0 #1a1a2e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.party-bar-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; line-height: 1.05; }
-.party-bar-lv { font-size: 18px; color: #fff; text-shadow: 1px 1px 0 #1a1a2e; }
-.party-bar-item { font-size: 14px; color: #ffe9a8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
-/* HP bar — full green, "ready for battle" */
-.hp-bar {
-  width: 100%; max-width: 180px; height: 10px;
-  background: #3c3c3c; border: 2px solid #222; border-radius: 5px; overflow: hidden;
-}
-.hp-bar.small { height: 8px; max-width: none; }
-.hp-fill { display: block; height: 100%; background: linear-gradient(180deg, #8df58d 0%, #3fd83f 55%, #1fa81f 100%); transition: width .2s steps(6); }
-.party-msgbox {
-  background: #fff; border: 3px solid #222; border-radius: 10px;
-  box-shadow: inset 0 0 0 2px #cfe0e8;
-  font-size: 21px; color: #333; padding: 8px 14px; margin-top: 10px;
-}
-.party-foot { margin-top: 6px; }
-.party-screen .muted { color: #5c5c3a; }
-.party-screen .inline-form input { background: #fff; }
 @media (max-width: 560px) {
-  .party-body { flex-direction: column; }
-  .party-lead { flex: none; min-height: 0; flex-direction: row; gap: 12px; }
-  .lead-sprite { transform: scale(1.4); margin: 6px 0; }
+  .team-row { align-items: flex-start; }
 }
 
 /* ============================================================
-   FOES tab — battle HUD: enemy healthboxes + VS banner
+   FOES tab — compact reference-team rows + VS summary
    ============================================================ */
 .vs-banner {
   display: flex; align-items: stretch; justify-content: center; gap: 6px;
@@ -828,11 +784,12 @@ a { color: var(--blue-deep); }
   flex: 1; max-width: 340px;
   background: #f8f8d8;
   border: 3px solid #20202c;
+  border-radius: 6px;
+  box-shadow: 3px 3px 0 rgba(31, 41, 71, 0.3);
   padding: 8px 14px 10px;
   color: #20202c;
 }
-.healthbox.enemy { clip-path: polygon(0 0, 100% 0, 100% 72%, 88% 100%, 0 100%); }
-.healthbox.player { clip-path: polygon(0 0, 100% 0, 100% 100%, 12% 100%, 0 72%); text-align: right; }
+.healthbox.player { text-align: right; }
 .hb-name { font-family: var(--font-title); font-size: 14px; letter-spacing: .5px; }
 .hb-sub { font-size: 17px; color: #55554a; }
 .vs-burst {
@@ -845,34 +802,40 @@ a { color: var(--blue-deep); }
   animation: vs-pulse 1.6s ease-in-out infinite;
 }
 @keyframes vs-pulse { 50% { transform: scale(1.08); } }
-.foe-list { display: flex; flex-direction: column; gap: 12px; }
+.foe-list { display: flex; flex-direction: column; gap: 10px; }
 .foe-box {
-  display: flex; gap: 10px; align-items: flex-start; cursor: pointer;
-  background: #f8f8d8;
-  border: 3px solid #20202c;
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 26px) 100%, 0 100%);
-  padding: 10px 40px 14px 12px;
-  color: #20202c;
+  background: var(--paper);
+  border: 3px solid var(--navy);
+  border-radius: var(--radius);
+  box-shadow: 3px 3px 0 rgba(31, 41, 71, 0.3);
+  padding: 10px 12px 8px;
+  color: var(--navy-ink);
 }
-.foe-box.selected { background: #fff3d0; border-color: #b02010; }
-.foe-box:focus-within { outline: 2px dashed #b02010; outline-offset: 3px; }
+.foe-box.selected { background: #fff3d0; border-color: var(--red); }
+.foe-box:focus-within { outline: 2px dashed var(--red); outline-offset: 3px; }
+.foe-head { display: flex; align-items: flex-start; gap: 10px; }
+.foe-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+}
 .preview-check { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.foe-cursor { color: #20202c; font-size: 18px; margin-top: 2px; }
+.foe-cursor { color: #20202c; font-size: 18px; margin-top: 2px; flex: none; }
 .foe-box.selected .foe-cursor { color: #b02010; animation: dome-blink 1.1s steps(2, start) infinite; }
-.foe-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.foe-heading { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .foe-name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .foe-name { font-family: var(--font-title); font-size: 14px; letter-spacing: .5px; }
 .foe-sub { font-size: 16px; color: #55554a; }
 .foe-sub a { color: #2050a0; }
-.foe-sprites { display: flex; gap: 6px; flex-wrap: wrap; }
-.foe-slot {
-  width: 58px; height: 46px;
-  display: flex; align-items: center; justify-content: center;
-  background: #fff; border: 2px solid #20202c; border-radius: 6px;
-}
-.target-meter { max-width: 220px; height: 12px; }
-.target-meter .hp-fill { background: linear-gradient(180deg, #ffd24d 0%, #f09030 60%, #d06010 100%); }
+.foe-box .sprite-strip { margin: 4px 0 0 28px; }
 .foe-box .spacer { flex: 1; }
+@media (max-width: 560px) {
+  .foe-box .sprite-strip { margin-left: 0; }
+  .vs-banner { flex-wrap: wrap; }
+}
 
 /* ============================================================
    FILES tab — save screen ("Would you like to save the game?")
